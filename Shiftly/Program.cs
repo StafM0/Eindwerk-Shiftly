@@ -125,6 +125,19 @@ app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, i
 });
 
 // DELETE: Shift
+app.MapDelete("/DeleteShift", async (int shiftId, ShiftlyDbContext db) =>
+{
+    var shift = await db.Shifts
+        .FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
+
+    if (shift == null)
+        return Results.NotFound();
+
+    db.Shifts.Remove(shift);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
 
 // GET: All Subscriptions
 app.MapGet("/GetAllSubscriptions", async (ShiftlyDbContext db) =>
