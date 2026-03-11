@@ -84,4 +84,18 @@ app.MapGet("/GetAllSubscriptionsFromUser", async (int userId, ShiftlyDbContext d
     return Results.Ok(subscriptions);
 });
 
+// GET: User Using Password And Email 
+app.MapGet("/login", async (string email, string password, ShiftlyDbContext db) =>
+{
+    var user = await db.Gebruikers
+        .Where(pbl => pbl.EmailGebruiker == email && pbl.WachtwoordGebruiker == password)
+        .Select(pbl => new { IdUser = pbl.IdGebruiker, NameUser = pbl.NaamGebruiker, FirstNameUser = pbl.VoorNaamGebruiker })
+        .FirstOrDefaultAsync();
+
+    if (user == null)
+        return Results.Unauthorized();
+
+    return Results.Ok(user);
+});
+
 app.Run();
