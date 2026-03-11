@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Shiftly.Models;
 using System.Reflection.PortableExecutable;
+using System.Xml.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString =
@@ -176,5 +177,27 @@ app.MapPost("/AddSubscription", async (string name, string description, decimal 
 });
 
 // POST: Add Shift
+app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, int pause, int fkDepartement, string description, ShiftlyDbContext db) =>
+{
+    var exists = await db.Shifts.AnyAsync(pbl => pbl.StartDateTime == start);
+
+    if (exists)
+        return Results.Conflict("Shift already in Database");
+
+    var shift = new Shift
+    {
+        StartDateTime = start,
+        EindDateTime = end,
+        Functie = function,
+        PauzeInMinuten = pause,
+        FkGebruikerAfdeling = fkDepartement,
+        Opmerking = description
+    };
+
+    db.Shifts.Add(shift);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"subscription", shift);
+});
 
 app.Run();
