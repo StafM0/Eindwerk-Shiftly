@@ -176,6 +176,19 @@ app.MapPost("/AddSubscription", async (string name, string description, decimal 
 });
 
 // DELETE: Subscription
+app.MapDelete("/DeleteSubscription", async (int subscriptionId, ShiftlyDbContext db) =>
+{
+    var subscription = await db.Abonnements
+        .FirstOrDefaultAsync(pbl => pbl.IdAbonnement == subscriptionId);
+
+    if (subscription == null)
+        return Results.NotFound();
+
+    db.Abonnements.Remove(subscription);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
 
 // GET: All Shifts From User
 app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
