@@ -171,8 +171,86 @@ app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
     return Results.Ok(shifts);
 });
 
+// PUT: Change Start DateTime
+app.MapPut("/ChangestartDateTime", async (int shiftId, DateTime startDate, ShiftlyDbContext db) =>
+{
+    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
+    if (shift == null)
+        return Results.NotFound();
+
+    shift.StartDateTime = DateTime.Now;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = shift.StartDateTime });
+});
+
+// PUT: Change End DateTime
+app.MapPut("/ChangeEndDateTime", async (int shiftId, DateTime endDate, ShiftlyDbContext db) =>
+{
+    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
+    if (shift == null)
+        return Results.NotFound();
+
+    shift.EindDateTime = DateTime.Now;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = shift.EindDateTime });
+});
+
+// PUT: Change Function
+app.MapPut("/ChangeFunction", async (int shiftId, string function, ShiftlyDbContext db) =>
+{
+    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
+    if (shift == null)
+        return Results.NotFound();
+
+    shift.Functie = function;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = shift.Functie });
+});
+
+// PUT: Change Pause
+app.MapPut("/ChangePause", async (int shiftId, int pause, ShiftlyDbContext db) =>
+{
+    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
+    if (shift == null)
+        return Results.NotFound();
+
+    shift.PauzeInMinuten = pause;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = shift.PauzeInMinuten });
+});
+
+// PUT: Change Description
+app.MapPut("/ChangeDescription", async (int shiftId, string description, ShiftlyDbContext db) =>
+{
+    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
+    if (shift == null)
+        return Results.NotFound();
+
+    shift.Opmerking = description;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = shift.Opmerking });
+});
+
+// PUT: Change Department
+app.MapPut("/ChangeDepartment", async (int shiftId, int department, ShiftlyDbContext db) =>
+{
+    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
+    if (shift == null)
+        return Results.NotFound();
+
+    shift.FkGebruikerAfdeling = department;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = shift.FkGebruikerAfdeling });
+});
+
 // POST: Add Shift
-app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, int pause, int fkDepartement, string description, ShiftlyDbContext db) =>
+app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, int pause, int fkDepartment, string description, ShiftlyDbContext db) =>
 {
     var exists = await db.Shifts.AnyAsync(pbl => pbl.StartDateTime == start);
 
@@ -185,7 +263,7 @@ app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, i
         EindDateTime = end,
         Functie = function,
         PauzeInMinuten = pause,
-        FkGebruikerAfdeling = fkDepartement,
+        FkGebruikerAfdeling = fkDepartment,
         Opmerking = description
     };
 
