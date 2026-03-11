@@ -44,28 +44,75 @@ app.MapGet("/GetAllUsers", async (ShiftlyDbContext db) =>
     return Results.Ok(gebruikers);
 });
 
+// PUT: Change Name
+app.MapPut("/ChangeName", async (int userId, string firstName, string name, ShiftlyDbContext db) =>
+{
+    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+    if (user == null)
+        return Results.NotFound();
+
+    user.NaamGebruiker = name;
+    user.VoorNaamGebruiker = firstName;
+    user.UpdatedAt = DateTime.Now;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = user.VoorNaamGebruiker, user.NaamGebruiker });
+});
+
+// PUT: Change eMail
+app.MapPut("/ChangeEMail", async (int userId, string email, ShiftlyDbContext db) =>
+{
+    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+    if (user == null)
+        return Results.NotFound();
+
+    user.EmailGebruiker = email;
+    user.UpdatedAt = DateTime.Now;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = user.EmailGebruiker });
+});
+
+// PUT: Change Password
+app.MapPut("/ChangePassword", async (int userId, string password, ShiftlyDbContext db) =>
+{
+    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+    if (user == null)
+        return Results.NotFound();
+
+    user.WachtwoordGebruiker = password;
+    user.UpdatedAt = DateTime.Now;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = user.WachtwoordGebruiker });
+});
+
 // PUT: Toggle isStudent
 app.MapPut("/ToggleStudentStatus", async (int userId, ShiftlyDbContext db) =>
 {
-    var studentStatus = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
-    if (studentStatus == null)
+    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+    if (user == null)
         return Results.NotFound();
 
-    studentStatus.IsStudent = !studentStatus.IsStudent;
+    user.IsStudent = !user.IsStudent;
+    user.UpdatedAt = DateTime.Now;
+    
     await db.SaveChangesAsync();
-    return Results.Ok(new { isStudent = studentStatus.IsStudent });
+    return Results.Ok(new { message = user.IsStudent });
 });
 
 // PUT: Toggle isActif
 app.MapPut("/ToggleActifStatus", async (int userId, ShiftlyDbContext db) =>
 {
-    var actifStatus = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
-    if (actifStatus == null)
+    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+    if (user == null)
         return Results.NotFound();
 
-    actifStatus.IsActief = !actifStatus.IsActief;
+    user.IsActief = !user.IsActief;
+    user.UpdatedAt = DateTime.Now;
+
     await db.SaveChangesAsync();
-    return Results.Ok(new { isActief = actifStatus.IsActief });
+    return Results.Ok(new { message = user.IsActief });
 });
 
 // POST: Add User
