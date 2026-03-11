@@ -27,7 +27,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // GET: All Users
-app.MapGet("/GetAllGebruikers", async (ShiftlyDbContext db) =>
+app.MapGet("/GetAllUsers", async (ShiftlyDbContext db) =>
 {
     var gebruikers = await db.Gebruikers.Select(pbl => new
     {
@@ -42,6 +42,18 @@ app.MapGet("/GetAllGebruikers", async (ShiftlyDbContext db) =>
         updatedat = pbl.UpdatedAt
     }).ToListAsync();
     return Results.Ok(gebruikers);
+});
+
+// PUT: Toggle isStudent
+app.MapPut("/ToggleStudentStatus", async (int userId, ShiftlyDbContext db) =>
+{
+    var studentStatus = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+    if (studentStatus == null)
+        return Results.NotFound();
+
+    studentStatus.IsStudent = !studentStatus.IsStudent;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { isStudent = studentStatus.IsStudent });
 });
 
 // POST: Add User
