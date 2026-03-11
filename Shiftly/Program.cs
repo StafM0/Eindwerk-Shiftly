@@ -387,6 +387,26 @@ app.MapGet("/GetAllSubscriptionsFromUser", async (int userId, ShiftlyDbContext d
     return Results.Ok(subscriptions);
 });
 
+// GET: All Wishlist Items From User
+app.MapGet("/GetAllWishListItemsFromUser", async (int userId, ShiftlyDbContext db) =>
+{
+    var wishlistitems = await db.Wishlistitems
+        .Where(pbl => pbl.FkGebruiker == userId)
+        .Select(pbl => new
+        {
+            idwishlist = pbl.IdWishListItem,
+            itemName = pbl.ItemNaam,
+            itemPrice = pbl.ItemPrijs,
+            itemDescription = pbl.ItemOmschrijving,
+            itemLink = pbl.ItemLink,
+            itemPriority = pbl.Prioriteit,
+            itemBought = pbl.Gehaald
+        })
+        .ToListAsync();
+
+    return Results.Ok(wishlistitems);
+});
+
 // GET: User Using Password And Email 
 app.MapGet("/login", async (string email, string password, ShiftlyDbContext db) =>
 {
