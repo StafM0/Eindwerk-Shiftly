@@ -33,12 +33,36 @@ app.MapGet("/GetAllGebruikers", async (ShiftlyDbContext db) =>
         VoorNaamGebruiker = pbl.VoorNaamGebruiker,
         NaamGebruiker = pbl.NaamGebruiker,
         EmailGebruiker = pbl.EmailGebruiker,
-        IsStudent = pbl.IsStudent
+        IsStudent = pbl.IsStudent,
+        WachtwoordGebruiker = pbl.WachtwoordGebruiker,
+        IsActief = pbl.IsActief,
+        createdAt = pbl.CreatedAt,
+        updatedat = pbl.UpdatedAt
     }).ToListAsync();
     return Results.Ok(gebruikers);
 });
 
-// GET: 
+// GET: All Shifts From User
+app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
+{
+    var items = await db.Shifts
+        .Include(s => s.FkGebruikerAfdelingNavigation)
+        .Where(s => s.FkGebruikerAfdelingNavigation.FkGebruiker == userId)
+        .Select(s => new
+        {
+            ShiftId = s.IdShift,
+            StartDateTime = s.StartDateTime,
+            EindDateTime = s.EindDateTime,
+            Functie = s.Functie,
+            PauzeInMinuten = s.PauzeInMinuten,
+            Opmerking = s.Opmerking,
+            Uurloon = s.FkGebruikerAfdelingNavigation.Uurloon,
+            AfdelingId = s.FkGebruikerAfdelingNavigation.FkAfdeling
+        })
+        .ToListAsync();
+
+    return Results.Ok(items);
+});
 
 
 app.Run();
