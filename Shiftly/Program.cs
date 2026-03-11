@@ -58,6 +58,18 @@ app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
 });
 
 // GET: All Subscriptions
+app.MapGet("/GetAllSubscriptions", async (ShiftlyDbContext db) =>
+{
+    var subscriptions = await db.Abonnements.Select(pbl => new
+    {
+        idAbonnement = pbl.IdAbonnement,
+        NaamAbonnement = pbl.NaamAbonnement,
+        OmschrijvingAbonnement = pbl.OmschrijvingAbonnement,
+        BedragAbonnement = pbl.BedragAbonnement,
+        IsActief = pbl.IsActief
+    }).ToListAsync();
+    return Results.Ok(subscriptions);
+});
 
 // GET: All Shifts From User
 app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
