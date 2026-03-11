@@ -56,6 +56,18 @@ app.MapPut("/ToggleStudentStatus", async (int userId, ShiftlyDbContext db) =>
     return Results.Ok(new { isStudent = studentStatus.IsStudent });
 });
 
+// PUT: Toggle isActif
+app.MapPut("/ToggleActifStatus", async (int userId, ShiftlyDbContext db) =>
+{
+    var actifStatus = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+    if (actifStatus == null)
+        return Results.NotFound();
+
+    actifStatus.IsActief = !actifStatus.IsActief;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { isActief = actifStatus.IsActief });
+});
+
 // POST: Add User
 app.MapPost("/AddUser", async (string email, string firstName, string name, string password, bool isStudent, ShiftlyDbContext db) =>
 {
