@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Shiftly.Models;
+using System.Reflection.PortableExecutable;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString =
@@ -153,6 +154,26 @@ app.MapPost("/AddUser", async (string email, string firstName, string name, stri
 });
 
 // POST: Add Subscription
+app.MapPost("/AddSubscription", async (string name, string description, decimal Amount, bool actif, ShiftlyDbContext db) =>
+{
+    var exists = await db.Abonnements.AnyAsync(pbl => pbl.NaamAbonnement == name);
+
+    if (exists)
+        return Results.Conflict("Subscription already in Database");
+
+    var subscription = new Abonnement
+    {
+        NaamAbonnement = name,
+        OmschrijvingAbonnement = description,
+        BedragAbonnement = Amount,
+        IsActief = actif
+    };
+
+    db.Abonnements.Add(subscription);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"subscription", subscription);
+});
 
 // POST: Add Shift
 
