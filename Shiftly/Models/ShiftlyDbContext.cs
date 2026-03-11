@@ -153,7 +153,7 @@ public partial class ShiftlyDbContext : DbContext
             entity.Property(e => e.Opmerking).HasMaxLength(255);
             entity.Property(e => e.StartDateTime).HasColumnType("datetime");
 
-            entity.HasOne(d => d.FkGebruikerAfdelingNavigation).WithMany(p => p.Shifts)
+            entity.HasOne(d => d.FkGebruikerAbbonomentNavigation).WithMany(p => p.Shifts)
                 .HasForeignKey(d => d.FkGebruikerAfdeling)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("shift_ibfk_1");

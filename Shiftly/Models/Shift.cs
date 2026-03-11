@@ -19,5 +19,5 @@ public partial class Shift
 
     public string? Opmerking { get; set; }
 
-    public virtual Gebruikerafdeling FkGebruikerAfdelingNavigation { get; set; } = null!;
+    public virtual Gebruikerafdeling FkGebruikerAbbonomentNavigation { get; set; } = null!;
 }

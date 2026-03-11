@@ -45,24 +45,43 @@ app.MapGet("/GetAllGebruikers", async (ShiftlyDbContext db) =>
 // GET: All Shifts From User
 app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
 {
-    var items = await db.Shifts
-        .Include(s => s.FkGebruikerAfdelingNavigation)
-        .Where(s => s.FkGebruikerAfdelingNavigation.FkGebruiker == userId)
-        .Select(s => new
+    var shifts = await db.Shifts
+        .Include(pbl => pbl.FkGebruikerAbbonomentNavigation)
+        .Where(pbl => pbl.FkGebruikerAbbonomentNavigation.FkGebruiker == userId)
+        .Select(pbl => new
         {
-            ShiftId = s.IdShift,
-            StartDateTime = s.StartDateTime,
-            EindDateTime = s.EindDateTime,
-            Functie = s.Functie,
-            PauzeInMinuten = s.PauzeInMinuten,
-            Opmerking = s.Opmerking,
-            Uurloon = s.FkGebruikerAfdelingNavigation.Uurloon,
-            AfdelingId = s.FkGebruikerAfdelingNavigation.FkAfdeling
+            ShiftId = pbl.IdShift,
+            StartDateTime = pbl.StartDateTime,
+            EindDateTime = pbl.EindDateTime,
+            PauzeInMinuten = pbl.PauzeInMinuten,
+            Functie = pbl.Functie,
+            Opmerking = pbl.Opmerking,
+            Uurloon = pbl.FkGebruikerAbbonomentNavigation.Uurloon,
+            AfdelingId = pbl.FkGebruikerAbbonomentNavigation.FkAfdeling
         })
         .ToListAsync();
 
-    return Results.Ok(items);
+    return Results.Ok(shifts);
 });
 
+// GET: All Subscriptions From User
+app.MapGet("/GetAllSubscriptionsFromUser", async (int userId, ShiftlyDbContext db) =>
+{
+    var subscriptions = await db.Gebruikerabonnements
+        .Where(ga => ga.FkGebruiker == userId)
+        .Include(ga => ga.FkAbonnementNavigation)
+        .Select(ga => new
+        {
+            AbonnementId = ga.FkAbonnement,
+            Naam = ga.FkAbonnementNavigation.NaamAbonnement,
+            Prijs = ga.FkAbonnementNavigation.BedragAbonnement,
+            PeriodeStart = ga.PeriodeStart,
+            PeriodeEinde = ga.PeriodeEinde,
+            Betaald = ga.Betaald
+        })
+        .ToListAsync();
+
+    return Results.Ok(subscriptions);
+});
 
 app.Run();
