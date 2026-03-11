@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Shiftly.Models;
 using System.Reflection.PortableExecutable;
+using System.Text.Json;
 using System.Xml.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,33 +45,28 @@ app.MapGet("/GetAllUsers", async (ShiftlyDbContext db) =>
     return Results.Ok(gebruikers);
 });
 
-// PUT: Change Name
-app.MapPut("/ChangeName", async (int userId, string firstName, string name, ShiftlyDbContext db) =>
+// PUT: Edit User
+app.MapPut("/UpdateUser", async (int id, JsonElement updates, ShiftlyDbContext db) =>
 {
-    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == id);
     if (user == null)
         return Results.NotFound();
 
-    user.NaamGebruiker = name;
-    user.VoorNaamGebruiker = firstName;
+    if (updates.TryGetProperty("name", out var name))
+        user.NaamGebruiker = name.GetString();
+
+    if (updates.TryGetProperty("firstName", out var firstName))
+        user.VoorNaamGebruiker = firstName.GetString();
+
+    if (updates.TryGetProperty("email", out var email))
+        user.EmailGebruiker = email.GetString();
+
+    if (updates.TryGetProperty("isStudent", out var isStudent))
+        user.IsStudent = isStudent.GetBoolean();
+
     user.UpdatedAt = DateTime.Now;
-
     await db.SaveChangesAsync();
-    return Results.Ok(new { message = user.VoorNaamGebruiker, user.NaamGebruiker });
-});
-
-// PUT: Change eMail
-app.MapPut("/ChangeEMail", async (int userId, string email, ShiftlyDbContext db) =>
-{
-    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
-    if (user == null)
-        return Results.NotFound();
-
-    user.EmailGebruiker = email;
-    user.UpdatedAt = DateTime.Now;
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = user.EmailGebruiker });
+    return Results.Ok(user);
 });
 
 // PUT: Change Password
@@ -85,34 +81,6 @@ app.MapPut("/ChangePassword", async (int userId, string password, ShiftlyDbConte
 
     await db.SaveChangesAsync();
     return Results.Ok(new { message = user.WachtwoordGebruiker });
-});
-
-// PUT: Toggle isStudent
-app.MapPut("/ToggleStudentStatus", async (int userId, ShiftlyDbContext db) =>
-{
-    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
-    if (user == null)
-        return Results.NotFound();
-
-    user.IsStudent = !user.IsStudent;
-    user.UpdatedAt = DateTime.Now;
-    
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = user.IsStudent });
-});
-
-// PUT: Toggle isActif
-app.MapPut("/ToggleActifStatus", async (int userId, ShiftlyDbContext db) =>
-{
-    var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
-    if (user == null)
-        return Results.NotFound();
-
-    user.IsActief = !user.IsActief;
-    user.UpdatedAt = DateTime.Now;
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = user.IsActief });
 });
 
 // POST: Add User
@@ -171,82 +139,33 @@ app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
     return Results.Ok(shifts);
 });
 
-// PUT: Change Start DateTime
-app.MapPut("/ChangestartDateTime", async (int shiftId, DateTime startDate, ShiftlyDbContext db) =>
+// PUT: Edit Shift
+app.MapPut("/UpdateShift", async (int id, JsonElement updates, ShiftlyDbContext db) =>
 {
-    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
+    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == id);
     if (shift == null)
         return Results.NotFound();
 
-    shift.StartDateTime = DateTime.Now;
+    if (updates.TryGetProperty("startDateTime", out var startDateTime))
+        shift.StartDateTime = startDateTime.GetDateTime();
+
+    if (updates.TryGetProperty("endDateTime", out var endDateTime))
+        shift.EindDateTime = endDateTime.GetDateTime();
+
+    if (updates.TryGetProperty("function", out var function))
+        shift.Functie = function.GetString();
+
+    if (updates.TryGetProperty("pause", out var pause))
+        shift.PauzeInMinuten = pause.GetInt32();
+
+    if (updates.TryGetProperty("description", out var description))
+        shift.Opmerking = description.GetString();
+
+    if (updates.TryGetProperty("department", out var department))
+        shift.FkGebruikerAfdeling = department.GetInt32();
 
     await db.SaveChangesAsync();
-    return Results.Ok(new { message = shift.StartDateTime });
-});
-
-// PUT: Change End DateTime
-app.MapPut("/ChangeEndDateTime", async (int shiftId, DateTime endDate, ShiftlyDbContext db) =>
-{
-    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
-    if (shift == null)
-        return Results.NotFound();
-
-    shift.EindDateTime = DateTime.Now;
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = shift.EindDateTime });
-});
-
-// PUT: Change Function
-app.MapPut("/ChangeFunction", async (int shiftId, string function, ShiftlyDbContext db) =>
-{
-    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
-    if (shift == null)
-        return Results.NotFound();
-
-    shift.Functie = function;
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = shift.Functie });
-});
-
-// PUT: Change Pause
-app.MapPut("/ChangePause", async (int shiftId, int pause, ShiftlyDbContext db) =>
-{
-    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
-    if (shift == null)
-        return Results.NotFound();
-
-    shift.PauzeInMinuten = pause;
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = shift.PauzeInMinuten });
-});
-
-// PUT: Change Description
-app.MapPut("/ChangeDescription", async (int shiftId, string description, ShiftlyDbContext db) =>
-{
-    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
-    if (shift == null)
-        return Results.NotFound();
-
-    shift.Opmerking = description;
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = shift.Opmerking });
-});
-
-// PUT: Change Department
-app.MapPut("/ChangeDepartment", async (int shiftId, int department, ShiftlyDbContext db) =>
-{
-    var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == shiftId);
-    if (shift == null)
-        return Results.NotFound();
-
-    shift.FkGebruikerAfdeling = department;
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = shift.FkGebruikerAfdeling });
+    return Results.Ok(shift);
 });
 
 // POST: Add Shift
@@ -334,6 +253,93 @@ app.MapDelete("/DeleteSubscription", async (int subscriptionId, ShiftlyDbContext
         return Results.NotFound();
 
     db.Abonnements.Remove(subscription);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+// GET: All Wishlist Items
+app.MapGet("/GetAllWishListItems", async (ShiftlyDbContext db) =>
+{
+    var wishlistitem = await db.Wishlistitems.Select(pbl => new
+    {
+        idwishlist = pbl.IdWishListItem,
+        itemName = pbl.ItemNaam,
+        itemPrice = pbl.ItemPrijs,
+        itemDescription = pbl.ItemOmschrijving,
+        itemLink = pbl.ItemLink,
+        itemPriority = pbl.Prioriteit,
+        itemBought = pbl.Gehaald
+    }).ToListAsync();
+    return Results.Ok(wishlistitem);
+});
+
+// PUT: Edit WishList Item
+app.MapPut("/UpdateWishListItem", async (int id, JsonElement updates, ShiftlyDbContext db) =>
+{
+    var item = await db.Wishlistitems.FindAsync(id);
+
+    if (item is null)
+        return Results.NotFound();
+
+    item.ItemNaam = updates.GetProperty("itemName").GetString();
+    item.ItemPrijs = updates.GetProperty("itemPrice").GetDecimal();
+    item.ItemOmschrijving = updates.GetProperty("itemDescription").GetString();
+    item.ItemLink = updates.GetProperty("itemLink").GetString();
+    item.Prioriteit = updates.GetProperty("itemPriority").GetInt32();
+    item.Gehaald = updates.GetProperty("itemBought").GetBoolean();
+
+    await db.SaveChangesAsync();
+    return Results.Ok(item);
+});
+
+// PUT: Change Priority
+app.MapPut("/ChangePriority", async (int itemId, int prio, ShiftlyDbContext db) =>
+{
+    var item = await db.Wishlistitems.FirstOrDefaultAsync(pbl => pbl.IdWishListItem == itemId);
+    if (item == null)
+        return Results.NotFound();
+
+    item.Prioriteit = prio;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = item.Prioriteit });
+});
+
+// POST: Add Wishlist Item
+app.MapPost("/AddWishlistItem", async (int fk, string name, decimal price, string descrpition, string link, int prio, bool made, ShiftlyDbContext db) =>
+{
+    var exists = await db.Wishlistitems.AnyAsync(pbl => pbl.ItemLink == link);
+
+    if (exists)
+        return Results.Conflict("item already in Database");
+
+    var item = new Wishlistitem
+    {
+        FkGebruiker = fk,
+        ItemNaam = name,
+        ItemPrijs = price,
+        ItemOmschrijving = descrpition,
+        ItemLink = link,
+        Prioriteit = prio,
+        Gehaald = made
+    };
+
+    db.Wishlistitems.Add(item);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"wishlistitem", item);
+});
+
+// DELETE: Wishlist Item
+app.MapDelete("/DeleteWishListItem", async (int itemId, ShiftlyDbContext db) =>
+{
+    var item = await db.Wishlistitems.FirstOrDefaultAsync(pbl => pbl.IdWishListItem == itemId);
+
+    if (item == null)
+        return Results.NotFound();
+
+    db.Wishlistitems.Remove(item);
     await db.SaveChangesAsync();
 
     return Results.NoContent();
