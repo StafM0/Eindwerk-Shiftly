@@ -42,6 +42,23 @@ app.MapGet("/GetAllGebruikers", async (ShiftlyDbContext db) =>
     return Results.Ok(gebruikers);
 });
 
+// GET: All Shifts
+app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
+{
+    var shifts = await db.Shifts.Select(pbl => new
+    {
+        idShift = pbl.IdShift,
+        StartDateTime = pbl.StartDateTime,
+        EindDateTime = pbl.EindDateTime,
+        PauzeInMinuten = pbl.PauzeInMinuten,
+        Functie = pbl.Functie,
+        Opmerking = pbl.Opmerking
+    }).ToListAsync();
+    return Results.Ok(shifts);
+});
+
+// GET: All Subscriptions
+
 // GET: All Shifts From User
 app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
 {
@@ -122,5 +139,9 @@ app.MapPost("/AddUser", async (string email, string firstName, string name, stri
 
     return Results.Created($"user", user);
 });
+
+// POST: Add Subscription
+
+// POST: Add Shift
 
 app.Run();
