@@ -44,6 +44,47 @@ app.MapGet("/GetAllGebruikers", async (ShiftlyDbContext db) =>
     return Results.Ok(gebruikers);
 });
 
+// POST: Add User
+app.MapPost("/AddUser", async (string email, string firstName, string name, string password, bool isStudent, ShiftlyDbContext db) =>
+{
+    var exists = await db.Gebruikers.AnyAsync(pbl => pbl.EmailGebruiker == email);
+
+    if (exists)
+        return Results.Conflict("User already in Database");
+
+    var user = new Gebruiker
+    {
+        EmailGebruiker = email,
+        VoorNaamGebruiker = firstName,
+        NaamGebruiker = name,
+        WachtwoordGebruiker = password,
+        IsStudent = isStudent,
+        CreatedAt = DateTime.Now,
+        UpdatedAt = DateTime.Now
+    };
+
+    db.Gebruikers.Add(user);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"user", user);
+});
+
+// DELETE: User
+app.MapDelete("/DeleteUser", async (int userId, ShiftlyDbContext db) =>
+{
+    var user = await db.Gebruikers
+        .FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
+
+    if (user == null)
+        return Results.NotFound();
+
+    db.Gebruikers.Remove(user);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+
 // GET: All Shifts
 app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
 {
@@ -59,6 +100,32 @@ app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
     return Results.Ok(shifts);
 });
 
+// POST: Add Shift
+app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, int pause, int fkDepartement, string description, ShiftlyDbContext db) =>
+{
+    var exists = await db.Shifts.AnyAsync(pbl => pbl.StartDateTime == start);
+
+    if (exists)
+        return Results.Conflict("Shift already in Database");
+
+    var shift = new Shift
+    {
+        StartDateTime = start,
+        EindDateTime = end,
+        Functie = function,
+        PauzeInMinuten = pause,
+        FkGebruikerAfdeling = fkDepartement,
+        Opmerking = description
+    };
+
+    db.Shifts.Add(shift);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"subscription", shift);
+});
+
+// DELETE: Shift
+
 // GET: All Subscriptions
 app.MapGet("/GetAllSubscriptions", async (ShiftlyDbContext db) =>
 {
@@ -72,6 +139,30 @@ app.MapGet("/GetAllSubscriptions", async (ShiftlyDbContext db) =>
     }).ToListAsync();
     return Results.Ok(subscriptions);
 });
+
+// POST: Add Subscription
+app.MapPost("/AddSubscription", async (string name, string description, decimal Amount, bool actif, ShiftlyDbContext db) =>
+{
+    var exists = await db.Abonnements.AnyAsync(pbl => pbl.NaamAbonnement == name);
+
+    if (exists)
+        return Results.Conflict("Subscription already in Database");
+
+    var subscription = new Abonnement
+    {
+        NaamAbonnement = name,
+        OmschrijvingAbonnement = description,
+        BedragAbonnement = Amount,
+        IsActief = actif
+    };
+
+    db.Abonnements.Add(subscription);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"subscription", subscription);
+});
+
+// DELETE: Subscription
 
 // GET: All Shifts From User
 app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
@@ -127,77 +218,6 @@ app.MapGet("/login", async (string email, string password, ShiftlyDbContext db) 
         return Results.Unauthorized();
 
     return Results.Ok(user);
-});
-
-// POST: Add User
-app.MapPost("/AddUser", async (string email, string firstName, string name, string password, bool isStudent, ShiftlyDbContext db) =>
-{
-    var exists = await db.Gebruikers.AnyAsync(pbl => pbl.EmailGebruiker == email);
-
-    if (exists)
-        return Results.Conflict("User already in Database");
-
-    var user = new Gebruiker
-    {
-        EmailGebruiker = email,
-        VoorNaamGebruiker = firstName,
-        NaamGebruiker = name,
-        WachtwoordGebruiker = password,
-        IsStudent = isStudent,
-        CreatedAt = DateTime.Now,
-        UpdatedAt = DateTime.Now
-    };
-
-    db.Gebruikers.Add(user);
-    await db.SaveChangesAsync();
-
-    return Results.Created($"user", user);
-});
-
-// POST: Add Subscription
-app.MapPost("/AddSubscription", async (string name, string description, decimal Amount, bool actif, ShiftlyDbContext db) =>
-{
-    var exists = await db.Abonnements.AnyAsync(pbl => pbl.NaamAbonnement == name);
-
-    if (exists)
-        return Results.Conflict("Subscription already in Database");
-
-    var subscription = new Abonnement
-    {
-        NaamAbonnement = name,
-        OmschrijvingAbonnement = description,
-        BedragAbonnement = Amount,
-        IsActief = actif
-    };
-
-    db.Abonnements.Add(subscription);
-    await db.SaveChangesAsync();
-
-    return Results.Created($"subscription", subscription);
-});
-
-// POST: Add Shift
-app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, int pause, int fkDepartement, string description, ShiftlyDbContext db) =>
-{
-    var exists = await db.Shifts.AnyAsync(pbl => pbl.StartDateTime == start);
-
-    if (exists)
-        return Results.Conflict("Shift already in Database");
-
-    var shift = new Shift
-    {
-        StartDateTime = start,
-        EindDateTime = end,
-        Functie = function,
-        PauzeInMinuten = pause,
-        FkGebruikerAfdeling = fkDepartement,
-        Opmerking = description
-    };
-
-    db.Shifts.Add(shift);
-    await db.SaveChangesAsync();
-
-    return Results.Created($"subscription", shift);
 });
 
 app.Run();
