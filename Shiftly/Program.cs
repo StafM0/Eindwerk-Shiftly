@@ -98,4 +98,29 @@ app.MapGet("/login", async (string email, string password, ShiftlyDbContext db) 
     return Results.Ok(user);
 });
 
+// POST: Add User
+app.MapPost("/AddUser", async (string email, string firstName, string name, string password, bool isStudent, ShiftlyDbContext db) =>
+{
+    var exists = await db.Gebruikers.AnyAsync(pbl => pbl.EmailGebruiker == email);
+
+    if (exists)
+        return Results.Conflict("User already in Database");
+
+    var user = new Gebruiker
+    {
+        EmailGebruiker = email,
+        VoorNaamGebruiker = firstName,
+        NaamGebruiker = name,
+        WachtwoordGebruiker = password,
+        IsStudent = isStudent,
+        CreatedAt = DateTime.Now,
+        UpdatedAt = DateTime.Now
+    };
+
+    db.Gebruikers.Add(user);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"user", user);
+});
+
 app.Run();
