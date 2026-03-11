@@ -24,7 +24,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-//GET: all users
+// GET: All Users
 app.MapGet("/GetAllGebruikers", async (ShiftlyDbContext db) =>
 {
     var gebruikers = await db.Gebruikers.Select(pbl => new
@@ -37,5 +37,8 @@ app.MapGet("/GetAllGebruikers", async (ShiftlyDbContext db) =>
     }).ToListAsync();
     return Results.Ok(gebruikers);
 });
+
+// GET: 
+
 
 app.Run();
