@@ -27,6 +27,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+#region Users
 // GET: All Users
 app.MapGet("/GetAllUsers", async (ShiftlyDbContext db) =>
 {
@@ -43,7 +44,7 @@ app.MapGet("/GetAllUsers", async (ShiftlyDbContext db) =>
         updatedat = pbl.UpdatedAt
     }).ToListAsync();
     return Results.Ok(gebruikers);
-});
+}).WithTags("Users");
 
 // PUT: Edit User
 app.MapPut("/UpdateUser", async (int id, JsonElement updates, ShiftlyDbContext db) =>
@@ -67,7 +68,7 @@ app.MapPut("/UpdateUser", async (int id, JsonElement updates, ShiftlyDbContext d
     user.UpdatedAt = DateTime.Now;
     await db.SaveChangesAsync();
     return Results.Ok(user);
-});
+}).WithTags("Users");
 
 // PUT: Change Password
 app.MapPut("/ChangePassword", async (int userId, string password, ShiftlyDbContext db) =>
@@ -81,7 +82,7 @@ app.MapPut("/ChangePassword", async (int userId, string password, ShiftlyDbConte
 
     await db.SaveChangesAsync();
     return Results.Ok(new { message = user.WachtwoordGebruiker });
-});
+}).WithTags("Users");
 
 // POST: Add User
 app.MapPost("/AddUser", async (string email, string firstName, string name, string password, bool isStudent, ShiftlyDbContext db) =>
@@ -106,7 +107,7 @@ app.MapPost("/AddUser", async (string email, string firstName, string name, stri
     await db.SaveChangesAsync();
 
     return Results.Created($"user", user);
-});
+}).WithTags("Users");
 
 // DELETE: User
 app.MapDelete("/DeleteUser", async (int userId, ShiftlyDbContext db) =>
@@ -121,9 +122,10 @@ app.MapDelete("/DeleteUser", async (int userId, ShiftlyDbContext db) =>
     await db.SaveChangesAsync();
 
     return Results.NoContent();
-});
+}).WithTags("Users");
+#endregion
 
-
+#region Shifts
 // GET: All Shifts
 app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
 {
@@ -137,7 +139,7 @@ app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
         Opmerking = pbl.Opmerking
     }).ToListAsync();
     return Results.Ok(shifts);
-});
+}).WithTags("Shifts");
 
 // PUT: Edit Shift
 app.MapPut("/UpdateShift", async (int id, JsonElement updates, ShiftlyDbContext db) =>
@@ -166,7 +168,7 @@ app.MapPut("/UpdateShift", async (int id, JsonElement updates, ShiftlyDbContext 
 
     await db.SaveChangesAsync();
     return Results.Ok(shift);
-});
+}).WithTags("Shifts");
 
 // POST: Add Shift
 app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, int pause, int fkDepartment, string description, ShiftlyDbContext db) =>
@@ -190,7 +192,7 @@ app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, i
     await db.SaveChangesAsync();
 
     return Results.Created($"subscription", shift);
-});
+}).WithTags("Shifts");
 
 // DELETE: Shift
 app.MapDelete("/DeleteShift", async (int shiftId, ShiftlyDbContext db) =>
@@ -205,8 +207,10 @@ app.MapDelete("/DeleteShift", async (int shiftId, ShiftlyDbContext db) =>
     await db.SaveChangesAsync();
 
     return Results.NoContent();
-});
+}).WithTags("Shifts");
+#endregion
 
+#region Subscriptions
 // GET: All Subscriptions
 app.MapGet("/GetAllSubscriptions", async (ShiftlyDbContext db) =>
 {
@@ -219,7 +223,7 @@ app.MapGet("/GetAllSubscriptions", async (ShiftlyDbContext db) =>
         IsActief = pbl.IsActief
     }).ToListAsync();
     return Results.Ok(subscriptions);
-});
+}).WithTags("Subscriptions");
 
 // POST: Add Subscription
 app.MapPost("/AddSubscription", async (string name, string description, decimal Amount, bool actif, ShiftlyDbContext db) =>
@@ -241,7 +245,7 @@ app.MapPost("/AddSubscription", async (string name, string description, decimal 
     await db.SaveChangesAsync();
 
     return Results.Created($"subscription", subscription);
-});
+}).WithTags("Subscriptions");
 
 // DELETE: Subscription
 app.MapDelete("/DeleteSubscription", async (int subscriptionId, ShiftlyDbContext db) =>
@@ -256,8 +260,10 @@ app.MapDelete("/DeleteSubscription", async (int subscriptionId, ShiftlyDbContext
     await db.SaveChangesAsync();
 
     return Results.NoContent();
-});
+}).WithTags("Subscriptions");
+#endregion
 
+#region Wishlist Items
 // GET: All Wishlist Items
 app.MapGet("/GetAllWishListItems", async (ShiftlyDbContext db) =>
 {
@@ -272,7 +278,7 @@ app.MapGet("/GetAllWishListItems", async (ShiftlyDbContext db) =>
         itemBought = pbl.Gehaald
     }).ToListAsync();
     return Results.Ok(wishlistitem);
-});
+}).WithTags("WishList Items");
 
 // PUT: Edit WishList Item
 app.MapPut("/UpdateWishListItem", async (int id, JsonElement updates, ShiftlyDbContext db) =>
@@ -291,7 +297,7 @@ app.MapPut("/UpdateWishListItem", async (int id, JsonElement updates, ShiftlyDbC
 
     await db.SaveChangesAsync();
     return Results.Ok(item);
-});
+}).WithTags("WishList Items");
 
 // PUT: Change Priority
 app.MapPut("/ChangePriority", async (int itemId, int prio, ShiftlyDbContext db) =>
@@ -304,7 +310,7 @@ app.MapPut("/ChangePriority", async (int itemId, int prio, ShiftlyDbContext db) 
 
     await db.SaveChangesAsync();
     return Results.Ok(new { message = item.Prioriteit });
-});
+}).WithTags("WishList Items");
 
 // POST: Add Wishlist Item
 app.MapPost("/AddWishlistItem", async (int fk, string name, decimal price, string descrpition, string link, int prio, bool made, ShiftlyDbContext db) =>
@@ -329,7 +335,7 @@ app.MapPost("/AddWishlistItem", async (int fk, string name, decimal price, strin
     await db.SaveChangesAsync();
 
     return Results.Created($"wishlistitem", item);
-});
+}).WithTags("WishList Items");
 
 // DELETE: Wishlist Item
 app.MapDelete("/DeleteWishListItem", async (int itemId, ShiftlyDbContext db) =>
@@ -343,7 +349,9 @@ app.MapDelete("/DeleteWishListItem", async (int itemId, ShiftlyDbContext db) =>
     await db.SaveChangesAsync();
 
     return Results.NoContent();
-});
+}).WithTags("WishList Items");
+#endregion
+
 
 // GET: All Shifts From User
 app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
@@ -365,7 +373,7 @@ app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
         .ToListAsync();
 
     return Results.Ok(shifts);
-});
+}).WithTags("Other");
 
 // GET: All Subscriptions From User
 app.MapGet("/GetAllSubscriptionsFromUser", async (int userId, ShiftlyDbContext db) =>
@@ -385,7 +393,7 @@ app.MapGet("/GetAllSubscriptionsFromUser", async (int userId, ShiftlyDbContext d
         .ToListAsync();
 
     return Results.Ok(subscriptions);
-});
+}).WithTags("Other");
 
 // GET: All Wishlist Items From User
 app.MapGet("/GetAllWishListItemsFromUser", async (int userId, ShiftlyDbContext db) =>
@@ -405,7 +413,7 @@ app.MapGet("/GetAllWishListItemsFromUser", async (int userId, ShiftlyDbContext d
         .ToListAsync();
 
     return Results.Ok(wishlistitems);
-});
+}).WithTags("Other");
 
 // GET: User Using Password And Email 
 app.MapGet("/login", async (string email, string password, ShiftlyDbContext db) =>
@@ -419,6 +427,6 @@ app.MapGet("/login", async (string email, string password, ShiftlyDbContext db) 
         return Results.Unauthorized();
 
     return Results.Ok(user);
-});
+}).WithTags("Other");
 
 app.Run();
