@@ -2,6 +2,11 @@ using ShiftlyFrontEnd.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri("http://localhost:7051/")
+});
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
