@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Shiftly/Shiftly_API.csproj" />
+  <Project Path="ShiftlyFrontEnd/ShiftlyFrontEnd.csproj" Id="9c20b30c-0ab8-49e1-a2a1-a966e42e74a9" />
 </Solution>

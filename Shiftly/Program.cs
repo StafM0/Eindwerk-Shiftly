@@ -352,7 +352,6 @@ app.MapDelete("/DeleteWishListItem", async (int itemId, ShiftlyDbContext db) =>
 }).WithTags("WishList Items");
 #endregion
 
-
 // GET: All Shifts From User
 app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
 {
