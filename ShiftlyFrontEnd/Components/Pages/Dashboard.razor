@@ -1,0 +1,256 @@
+@page "/dashboard"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedSessionStorage SessionStorage
+
+<PageTitle>Shiftly – Dashboard</PageTitle>
+
+@if (!_sessionChecked){}
+else if (!_isLoggedIn){}
+else if (_isLoading)
+{
+    <div class="dash-root">
+        <p class="loading-text">Laden…</p>
+    </div>
+}
+else
+{
+    <div class="dash-root">
+        <header class="topbar">
+            <div class="brand">
+                <img src="/ShiftlyLogo.png" class="brand-logo" alt="Shiftly" />
+            </div>
+            <nav class="nav-pill">
+                <a class="nav-item is-active" href="/dashboard">Dashboard</a>
+                <a class="nav-item" href="/shifts">Shifts</a>
+                <a class="nav-item" href="/wishlist">Wishlist</a>
+                <a class="nav-item" href="/abonnementen">Abonnementen</a>
+            </nav>
+            <div class="top-actions">
+                <a class="btn-ghost" href="/user">@_fullName</a>
+            </div>
+        </header>
+
+        <main class="grid-layout">
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Opkomende shifts</h2>
+                        <p class="card-sub">Je komende dagen, netjes op een rij.</p>
+                    </div>
+                    <a class="btn-primary-sm" href="/shift-toevoegen">+ Add</a>
+                </div>
+                <div class="item-list">
+                    @if (_shifts.Count == 0)
+                    {
+                        <div class="item-row">
+                            <div class="item-meta">Geen shifts gevonden.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var shift in _shifts)
+                        {
+                            <div class="item-row">
+                                <div class="item-left">
+                                    <div class="item-title">@shift.Functie</div>
+                                    <div class="item-meta">
+                                        @shift.StartDateTime.ToString("ddd dd MMM HH:mm") – @shift.EindDateTime.ToString("HH:mm")
+                                    </div>
+                                </div>
+                                <span class="badge @ShiftBadgeClass(shift.StartDateTime)">
+                                    @ShiftLabel(shift.StartDateTime)
+                                </span>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="overview-box">
+                    <h2 class="card-title">Overzicht</h2>
+                    <p class="card-sub">Een rustige snapshot van je week.</p>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Deze week</div>
+                            <div class="stat-value">@ShiftsThisWeek</div>
+                            <div class="stat-desc">Shifts gepland</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">To do</div>
+                            <div class="stat-value">@OpenSubscriptions</div>
+                            <div class="stat-desc">Abonnementen open</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Wishlist</div>
+                            <div class="stat-value">@_wishlist.Count</div>
+                            <div class="stat-desc">Items in lijst</div>
+                        </div>
+                    </div>
+                    <div class="tip-box">
+                        Tip: hou het simpel. Plan je shifts, check je abonnementen, en werk naar je wishlist toe.
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Abonnementen</h2>
+                        <p class="card-sub">Jouw actieve abonnementen.</p>
+                    </div>
+                </div>
+                <div class="item-list">
+                    @if (_subscriptions.Count == 0)
+                    {
+                        <div class="item-row">
+                            <div class="item-meta">Geen abonnementen gevonden.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var sub in _subscriptions)
+                        {
+                            <div class="item-row">
+                                <div class="item-left">
+                                    <div class="item-title">@sub.Naam</div>
+                                    <div class="item-meta">Vervalt: @sub.PeriodeEinde.ToString("dd MMM")</div>
+                                </div>
+                                <span class="badge">€ @sub.Prijs.ToString("0.00")</span>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+
+            <section class="card card-fullwidth">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Wishlist</h2>
+                        <p class="card-sub">Top 3 items waar je naartoe werkt.</p>
+                    </div>
+                    <a class="btn-link" href="/wishlist">Bekijk alles</a>
+                </div>
+                <div class="wish-grid">
+                    @if (_wishlist.Count == 0)
+                    {
+                        <div class="wish-card">
+                            <div class="wish-name empty-text">Geen items gevonden.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var item in _wishlist.Take(3))
+                        {
+                            <div class="wish-card">
+                                <div class="wish-name">@item.ItemName</div>
+                                <div class="wish-desc">@item.ItemDescription</div>
+                                <div class="wish-footer">
+                                    <span class="wish-tip">Prioriteit: @PriorityLabel(item.ItemPriority)</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+        </main>
+    </div>
+}
+
+@code {
+    bool _sessionChecked = false;
+    bool _isLoggedIn = false;
+    bool _isLoading = true;
+    int _userId;
+    string _fullName = "";
+    List<ShiftDto> _shifts = new();
+    List<SubscriptionDto> _subscriptions = new();
+    List<WishlistDto> _wishlist = new();
+
+    // Telt hoeveel shifts er deze week zijn gepland
+    int ShiftsThisWeek => _shifts.Count(s => s.StartDateTime >= DateTime.Today && s.StartDateTime < DateTime.Today.AddDays(7 - (int)DateTime.Today.DayOfWeek + 1));
+
+    // Telt hoeveel abonnementen nog niet betaald zijn
+    int OpenSubscriptions => _subscriptions.Count(s => !s.Betaald);
+
+    // Wordt aangeroepen na de eerste render — pas dan kunnen we sessie lezen via JS
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var idResult = await SessionStorage.GetAsync<int>("userId");
+            var nameResult = await SessionStorage.GetAsync<string>("userFullName");
+            if (idResult.Success && idResult.Value > 0)
+            {
+                _userId = idResult.Value;
+                _fullName = nameResult.Success ? nameResult.Value ?? "" : "";
+                _isLoggedIn = true;
+                _sessionChecked = true;
+                await LoadData();
+            }
+            else
+            {
+                _isLoggedIn = false;
+                _sessionChecked = true;
+                StateHasChanged();
+                Navigation.NavigateTo("/", forceLoad: false);
+            }
+        }
+        catch
+        {
+            _isLoggedIn = false;
+            _sessionChecked = true;
+            Navigation.NavigateTo("/", forceLoad: false);
+        }
+    }
+
+    async Task LoadData()
+    {
+        _isLoading = true;
+        StateHasChanged();
+        try
+        {
+            var t1 = Http.GetFromJsonAsync<List<ShiftDto>>($"GetAllShiftsFromUser?userId={_userId}");
+            var t2 = Http.GetFromJsonAsync<List<SubscriptionDto>>($"GetAllSubscriptionsFromUser?userId={_userId}");
+            var t3 = Http.GetFromJsonAsync<List<WishlistDto>>($"GetAllWishListItemsFromUser?userId={_userId}");
+            await Task.WhenAll(t1, t2, t3);
+
+            _shifts = (t1.Result ?? new()).Where(s => s.StartDateTime >= DateTime.Now).OrderBy(s => s.StartDateTime).Take(5).ToList();
+            _subscriptions = (t2.Result ?? new()).OrderBy(s => s.PeriodeEinde).ToList();
+            _wishlist = (t3.Result ?? new()).Where(w => !w.ItemBought).OrderBy(w => w.ItemPriority).ToList();
+        }
+        catch{}
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    static string ShiftLabel(DateTime start)
+    {
+        var diff = (start.Date - DateTime.Today).Days;
+        return diff switch
+        {
+            0 => "Vandaag",
+            1 => "Morgen",
+            <= 7 => "Deze week",
+            _ => "Volgende week"
+        };
+    }
+
+    static string ShiftBadgeClass(DateTime start) => (start.Date - DateTime.Today).Days < 1 ? "badge badge-blue" : "badge badge-muted";
+
+    static string PriorityLabel(int? prio) => prio switch
+    {
+        1 => "hoog",
+        2 => "medium",
+        3 => "laag",
+        _ => "?"
+    };
+
+    record ShiftDto(int ShiftId, DateTime StartDateTime, DateTime EindDateTime, int PauzeInMinuten, string Functie, string? Opmerking, decimal? Uurloon, int AfdelingId); 
+    record SubscriptionDto(int AbonnementId, string Naam, decimal Prijs, DateOnly PeriodeStart, DateOnly PeriodeEinde, bool Betaald); 
+    record WishlistDto(int Idwishlist, string ItemName, decimal? ItemPrice, string? ItemDescription, string? ItemLink, int? ItemPriority, bool ItemBought);
+}

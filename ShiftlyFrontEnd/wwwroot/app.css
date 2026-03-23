@@ -1,3 +1,21 @@
+:root {
+    --bg: #0b0e14;
+    --surface: #111520;
+    --border: #1e2535;
+    --accent: #3d7fff;
+    --accent-h: #5b96ff;
+    --text: #e8ecf4;
+    --muted: #6b7a99;
+    --font-disp: 'DM Sans', 'Segoe UI', sans-serif;
+    --card-w: 480px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }

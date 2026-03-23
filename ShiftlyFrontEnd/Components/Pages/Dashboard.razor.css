@@ -1,0 +1,439 @@
+/* ══════════════════════════════════════════════════════
+   Dashboard.razor.css
+   Stijlen voor de dashboardpagina van Shiftly.
+   Geen hover-effecten, geen animaties — zo simpel mogelijk.
+   ══════════════════════════════════════════════════════ */
+
+
+/* ── Root wrapper ────────────────────────────────────────
+   Vult de volledige schermhoogte en stapelt topbar + main
+   verticaal op elkaar via flexbox.                        */
+.dash-root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Laadtekst terwijl data van de API komt */
+.loading-text {
+    padding: 2rem;
+    color: #aaa;
+}
+
+
+/* ── Topbar ──────────────────────────────────────────────
+   Blijft bovenaan gekleefd terwijl je scrolt (sticky).
+   Logo links, nav midden, gebruikersnaam rechts.          */
+.topbar {
+    position: sticky; /* blijft zichtbaar bij scrollen */
+    top: 0;
+    z-index: 10; /* boven andere elementen */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 24px;
+    border-bottom: 1px solid #1e2535;
+    background: rgba(11, 14, 20, 0.75);
+    backdrop-filter: blur(12px); /* lichte blur achter de topbar */
+}
+
+/* Logocontainer links in de topbar */
+.brand {
+    min-width: 140px;
+}
+
+/* Het logo zelf — wit gemaakt via filter: invert */
+.brand-logo {
+    height: auto;
+    width: 50px;
+    filter: invert(1);
+    display: block;
+}
+
+
+/* ── Navigatie pill ──────────────────────────────────────
+   De navigatielinks zitten in een afgeronde "pill"-balk.  */
+.nav-pill {
+    display: flex;
+    gap: 4px;
+    padding: 5px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #1e2535;
+    border-radius: 14px;
+}
+
+/* Één navigatielink */
+.nav-item {
+    text-decoration: none;
+    color: #6b7a99; /* grijs als niet actief */
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    white-space: nowrap;
+}
+
+    /* De actieve pagina krijgt een lichte achtergrond */
+    .nav-item.is-active {
+        color: #e8ecf4;
+        background: rgba(255, 255, 255, 0.10);
+    }
+
+
+/* ── Gebruikersnaam rechts in de topbar ──────────────────*/
+.top-actions {
+    min-width: 140px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* De knop/link met de naam van de gebruiker */
+.btn-ghost {
+    text-decoration: none;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    color: #e8ecf4;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid #1e2535;
+    white-space: nowrap;
+}
+
+
+/* ── Hoofdgrid ───────────────────────────────────────────
+   3 kolommen op de bovenste rij, de wishlist pakt daarna
+   de volle breedte via card-fullwidth.                    */
+.grid-layout {
+    flex: 1; /* vult resterende hoogte */
+    width: min(1200px, 100%); /* nooit breder dan 1200px */
+    margin: 0 auto;
+    padding: 20px 20px 32px;
+    display: grid;
+    grid-template-columns: 1fr 1.35fr 1fr; /* middelste kolom iets breder */
+    gap: 16px;
+    align-items: stretch; /* alle kolommen even lang */
+}
+
+/* Wishlist card neemt alle kolommen in — volle breedte */
+.card-fullwidth {
+    grid-column: 1 / -1;
+}
+
+/* Op smalle schermen: alles onder elkaar */
+@media (max-width: 1020px) {
+    .grid-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .card-fullwidth {
+        grid-column: 1;
+    }
+
+    /* Topbar items wrappen naar meerdere regels */
+    .topbar {
+        flex-wrap: wrap;
+    }
+
+    /* Nav neemt volledige breedte en scrollt horizontaal */
+    .nav-pill {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    /* Verwijder vaste minimumbreedtes op kleine schermen */
+    .brand,
+    .top-actions {
+        min-width: auto;
+    }
+}
+
+
+/* ── Card ────────────────────────────────────────────────
+   Elke sectie zit in een donkere afgeronde kaart.         */
+.card {
+    background: #111520;
+    border: 1px solid #1e2535;
+    border-radius: 20px;
+    padding: 20px;
+}
+
+
+/* ── Koptekst van een card ───────────────────────────────
+   Titel links, optionele knop rechts naast elkaar.        */
+.card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+/* Hoofdtitel in de card */
+.card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #e8ecf4;
+    margin: 0;
+}
+
+/* Ondertitel/subtekst in de card */
+.card-sub {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: #6b7a99;
+    line-height: 1.45;
+}
+
+
+/* ── Knoppen ─────────────────────────────────────────────*/
+
+/* Blauwe primaire knop (bv. "+ Add" bij shifts) */
+.btn-primary-sm {
+    text-decoration: none;
+    padding: 8px 14px;
+    background: #3d7fff;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* Tekstlink (bv. "Bekijk alles" bij wishlist) */
+.btn-link {
+    text-decoration: none;
+    background: none;
+    border: none;
+    color: #6b7a99;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    cursor: pointer;
+    padding: 4px 0;
+    white-space: nowrap;
+}
+
+
+/* ── Itemlijst (shifts & abonnementen) ───────────────────
+   Verticale stapel van rijen met wat ruimte ertussen.      */
+.item-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Één rij in de lijst: inhoud links, badge rechts */
+.item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #1e2535;
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+/* Linker gedeelte van een rij (titel + meta) */
+.item-left {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0; /* nodig voor tekst-overflow te laten werken */
+}
+
+/* Primaire tekst in een rij (bv. functienaam of abonnementsnaam) */
+.item-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #e8ecf4;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* te lange tekst afkappen met "…" */
+}
+
+/* Secundaire tekst in een rij (bv. datum of vervaldatum) */
+.item-meta {
+    font-size: 0.78rem;
+    color: #6b7a99;
+}
+
+
+/* ── Badges ──────────────────────────────────────────────
+   Kleine gekleurde labels (bv. "Vandaag" of "€ 2,49").    */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px; /* volledig afgerond */
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0; /* badge wordt niet smaller dan zijn inhoud */
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+}
+
+/* Blauwe badge — voor shifts die vandaag of morgen zijn */
+.badge-blue {
+    background: rgba(61, 127, 255, 0.15);
+    border: 1px solid rgba(61, 127, 255, 0.35);
+    color: #7aaaff;
+}
+
+/* Rode badge — voor prijzen van abonnementen */
+.badge-red {
+    background: rgba(224, 82, 82, 0.12);
+    border: 1px solid rgba(224, 82, 82, 0.3);
+    color: #f09090;
+}
+
+/* Grijze badge — voor shifts verder in de toekomst */
+.badge-muted {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #1e2535;
+    color: #6b7a99;
+}
+
+
+/* ── Overzichtbox ────────────────────────────────────────
+   Lichte wrapper rondom de statistieken in kolom 2.        */
+.overview-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #1e2535;
+    border-radius: 14px;
+    padding: 16px;
+}
+
+
+/* ── Statistieken grid ───────────────────────────────────
+   Drie gelijke kolommen naast elkaar voor de drie stats.   */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+}
+
+/* Één statkaartje */
+.stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #1e2535;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+/* Bovenste label van een stat (bv. "DEZE WEEK") */
+.stat-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #6b7a99;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Het grote getal in het midden van een stat */
+.stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #e8ecf4;
+    letter-spacing: -0.03em;
+    margin-top: 6px;
+    line-height: 1;
+}
+
+/* Beschrijving onder het getal (bv. "Shifts gepland") */
+.stat-desc {
+    font-size: 0.72rem;
+    color: #6b7a99;
+    margin-top: 4px;
+}
+
+
+/* ── Tipbox ──────────────────────────────────────────────
+   Blauwe gestippelde infobox onderaan het overzicht.       */
+.tip-box {
+    margin-top: 12px;
+    padding: 11px 14px;
+    background: rgba(61, 127, 255, 0.06);
+    border: 1px dashed rgba(61, 127, 255, 0.2);
+    border-radius: 10px;
+    font-size: 0.78rem;
+    color: #6b7a99;
+    line-height: 1.5;
+}
+
+
+/* ── Wishlist grid ───────────────────────────────────────
+   Drie wishlist-items naast elkaar in de volle-breedte row.*/
+.wish-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+/* Op smalle schermen: items onder elkaar */
+@media (max-width: 740px) {
+    .wish-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Één wishlist-kaartje */
+.wish-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #1e2535;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Naam van het wishlist-item (vetgedrukt bovenaan) */
+.wish-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #e8ecf4;
+    letter-spacing: -0.01em;
+}
+
+/* Grijze tekst voor lege staat */
+.empty-text {
+    color: #aaa;
+}
+
+/* Beschrijving van het wishlist-item */
+.wish-desc {
+    font-size: 0.76rem;
+    color: #6b7a99;
+    line-height: 1.45;
+    flex: 1; /* duwt de footer naar onderen */
+}
+
+/* Onderste balk van een wishlist-kaartje (prioriteit) */
+.wish-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+/* Prioriteitstekst in de footer */
+.wish-tip {
+    font-size: 0.72rem;
+    color: #6b7a99;
+}

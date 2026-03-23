@@ -1,23 +1,221 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+<div class="main-layout">
+    <div class="auth-bg">
+        <div class="grid-overlay"></div>
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+    @Body
 </div>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
-</div>
+<style>
+        *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html, body {
+        height: 100%;
+    }
+
+    body {
+        background: #0b0e14;
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+        color: #e8ecf4;
+        overflow-x: hidden;
+    }
+
+    .main-layout {
+        min-height: 100vh;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Background */
+    .auth-bg {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .grid-overlay {
+        position: absolute;
+        inset: 0;
+        background-image: linear-gradient(rgba(61,127,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(61,127,255,.06) 1px, transparent 1px);
+        background-size: 48px 48px;
+    }
+
+    .glow {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(120px);
+        opacity: .35;
+    }
+
+    .glow-1 {
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, #1a3b80, transparent 70%);
+        top: -150px;
+        left: -100px;
+    }
+
+    .glow-2 {
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, #0d2d60, transparent 70%);
+        bottom: -120px;
+        right: -80px;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+        letter-spacing: -.03em;
+        color: #e8ecf4;
+    }
+
+    a {
+        color: #3d7fff;
+        text-decoration: none;
+        transition: color .15s;
+    }
+
+        a:hover {
+            color: #5b96ff;
+        }
+
+    /* Buttons */
+    .btn-primary {
+        width: 100%;
+        padding: 13px;
+        background: #3d7fff;
+        color: #fff;
+        border: none;
+        border-radius: 11px;
+        font-size: .95rem;
+        font-weight: 600;
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+        cursor: pointer;
+        transition: background .2s, transform .1s, box-shadow .2s;
+        box-shadow: 0 4px 20px rgba(61,127,255,.3);
+        letter-spacing: -.01em;
+    }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5b96ff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 28px rgba(61,127,255,.4);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled,
+        .btn-primary.loading {
+            opacity: .6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    .link-btn {
+        background: none;
+        border: none;
+        color: #3d7fff;
+        cursor: pointer;
+        font-size: .85rem;
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+        font-weight: 600;
+        padding: 0;
+        transition: color .15s;
+    }
+
+        .link-btn:hover {
+            color: #5b96ff;
+            text-decoration: underline;
+        }
+
+    /* Alerts */
+    .alert-box,
+    .success-box {
+        padding: 11px 15px;
+        border-radius: 10px;
+        font-size: .82rem;
+        margin-bottom: 20px;
+        line-height: 1.45;
+    }
+
+    .alert-box {
+        background: rgba(224,82,82,.12);
+        border: 1px solid rgba(224,82,82,.3);
+        color: #f09090;
+    }
+
+    .success-box {
+        background: rgba(62,207,142,.1);
+        border: 1px solid rgba(62,207,142,.3);
+        color: #7de8bb;
+    }
+
+    /* Form fields */
+    .field {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        margin-bottom: 18px;
+    }
+
+        .field label {
+            font-size: .78rem;
+            font-weight: 600;
+            color: #6b7a99;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+
+        .field input[type="text"],
+        .field input[type="email"],
+        .field input[type="password"] {
+            background: rgba(255,255,255,.04);
+            border: 1px solid #1e2535;
+            border-radius: 10px;
+            padding: 11px 14px;
+            color: #e8ecf4;
+            font-size: .9rem;
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+            width: 100%;
+        }
+
+        .field input:focus {
+            border-color: #3d7fff;
+            box-shadow: 0 0 0 3px rgba(61,127,255,.18);
+        }
+
+        .field input::placeholder {
+            color: #3a4460;
+        }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #0b0e14;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #1e2535;
+        border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #3d7fff;
+    }
+</style>

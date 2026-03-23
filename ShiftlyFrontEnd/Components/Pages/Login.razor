@@ -1,0 +1,216 @@
+@page "/"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedSessionStorage SessionStorage
+
+<PageTitle>Shiftly – Inloggen</PageTitle>
+
+<div class="auth-root">
+    <div class="auth-card @(IsRegister ? "flipped" : "")">
+        <div class="panel panel-login">
+            <h2 class="panel-title">Welkom terug</h2>
+            <p class="panel-sub">Log in op je account om verder te gaan.</p>
+                @if (!string.IsNullOrEmpty(LoginError))
+                {
+                    <div class="alert-box">@LoginError</div>
+                }
+            <div class="field">
+                <label>E-mailadres</label>
+                <input type="email" placeholder="naam@voorbeeld.be" @bind="LoginEmail" @bind:event="oninput" />
+            </div>
+
+            <div class="field">
+                <label>Wachtwoord</label>
+                <div class="pw-wrap">
+                    <input type="@(ShowLoginPw ? "text" : "password")" placeholder="••••••••" @bind="LoginPassword" @bind:event="oninput" />
+                    <button class="pw-toggle" type="button" @onclick="() => ShowLoginPw = !ShowLoginPw">
+                        @(ShowLoginPw ? "x" : "👁")
+                    </button>
+                </div>
+            </div>
+            <button class="btn-primary"
+                    @onclick="HandleLogin"
+                    disabled="@IsLoggingIn">
+                @(IsLoggingIn ? "Bezig…" : "Inloggen")
+            </button>
+            <p class="switch-text">
+                Nog geen account?
+                <button class="link-btn" @onclick="() => SwitchTo(true)">Registreer je</button>
+            </p>
+        </div>
+
+        <div class="panel panel-register">
+            <div class="brand">
+                <img src="/ShiftlyLogo.png" class="brand-logo" alt="Shiftly" />
+            </div>
+            <h2 class="panel-title">Account aanmaken</h2>
+            <p class="panel-sub">Maak je gratis account aan en begin vandaag.</p>
+                @if (!string.IsNullOrEmpty(RegisterError))
+                {
+                    <div class="alert-box">@RegisterError</div>
+                }
+                @if (!string.IsNullOrEmpty(RegisterSuccess))
+                {
+                    <div class="success-box">@RegisterSuccess</div>
+                }
+            <div class="field-row">
+                <div class="field">
+                    <label>Voornaam</label>
+                    <input type="text" placeholder="Jan" @bind="RegFirstName" @bind:event="oninput" />
+                </div>
+                <div class="field">
+                    <label>Achternaam</label>
+                    <input type="text" placeholder="Janssen" @bind="RegLastName" @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="field">
+                <label>E-mailadres</label>
+                <input type="email" placeholder="naam@voorbeeld.be" @bind="RegEmail" @bind:event="oninput" />
+            </div>
+            <div class="field">
+                <label>Wachtwoord</label>
+                <div class="pw-wrap">
+                    <input type="@(ShowRegPw ? "text" : "password")" placeholder="Minimaal 6 tekens" @bind="RegPassword" @bind:event="oninput" />
+                    <button class="pw-toggle" type="button" @onclick="() => ShowRegPw = !ShowRegPw">
+                        @(ShowRegPw ? "x" : "👁")
+                    </button>
+                </div>
+            </div>
+            <div class="field checkbox-field">
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="RegIsStudent" />
+                    <span class="checkbox-custom"></span>
+                    Ik ben student
+                </label>
+            </div>
+            <button class="btn-primary" @onclick="HandleRegister" disabled="@IsRegistering">
+                @(IsRegistering ? "Bezig…" : "Account aanmaken")
+            </button>
+            <p class="switch-text">
+                Al een account?
+                <button class="link-btn" @onclick="() => SwitchTo(false)">Inloggen</button>
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    bool IsRegister = false;
+    string LoginEmail = "";
+    string LoginPassword = "";
+    string LoginError = "";
+    bool ShowLoginPw = false;
+    bool IsLoggingIn = false;
+    string RegFirstName = "";
+    string RegLastName = "";
+    string RegEmail = "";
+    string RegPassword = "";
+    bool RegIsStudent = false;
+    string RegisterError = "";
+    string RegisterSuccess = "";
+    bool ShowRegPw = false;
+    bool IsRegistering = false;
+
+    //Methodes
+    // Wisselt tussen het login- en registratiepaneel en wist meldingen
+    void SwitchTo(bool register)
+    {
+        IsRegister = register;
+        LoginError = RegisterError = RegisterSuccess = "";
+    }
+
+    // Verwerkt het loginformulier: valideert invoer en roept de API aan
+    async Task HandleLogin()
+    {
+        LoginError = "";
+        if (string.IsNullOrWhiteSpace(LoginEmail) || string.IsNullOrWhiteSpace(LoginPassword))
+        {
+            LoginError = "Vul e-mailadres en wachtwoord in.";
+            return;
+        }
+
+        IsLoggingIn = true;
+        try
+        {
+            var url = $"login?email={Uri.EscapeDataString(LoginEmail)}&password={Uri.EscapeDataString(LoginPassword)}";
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var user = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                if (user != null)
+                {
+                    await SessionStorage.SetAsync("userId", user.IdUser);
+                    await SessionStorage.SetAsync("userFirstName", user.FirstNameUser);
+                    await SessionStorage.SetAsync("userFullName", $"{user.FirstNameUser} {user.NameUser}");
+                }
+                Navigation.NavigateTo("/dashboard");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                LoginError = "Ongeldig e-mailadres of wachtwoord.";
+            }
+            else
+            {
+                LoginError = "Er is een fout opgetreden. Probeer het opnieuw.";
+            }
+        }
+        catch
+        {
+            LoginError = "Kan geen verbinding maken met de server.";
+        }
+        finally
+        {
+            IsLoggingIn = false;
+        }
+    }
+
+    // Verwerkt het registratieformulier: valideert invoer en roept de API aan
+    async Task HandleRegister()
+    {
+        RegisterError = RegisterSuccess = "";
+        if (string.IsNullOrWhiteSpace(RegFirstName) || string.IsNullOrWhiteSpace(RegLastName) ||
+            string.IsNullOrWhiteSpace(RegEmail) || string.IsNullOrWhiteSpace(RegPassword))
+        {
+            RegisterError = "Vul alle velden in.";
+            return;
+        }
+        if (RegPassword.Length < 6)
+        {
+            RegisterError = "Wachtwoord moet minimaal 6 tekens bevatten.";
+            return;
+        }
+
+        IsRegistering = true;
+        try
+        {
+            var url = $"AddUser?email={Uri.EscapeDataString(RegEmail)}" + $"&firstName={Uri.EscapeDataString(RegFirstName)}" + $"&name={Uri.EscapeDataString(RegLastName)}" + $"&password={Uri.EscapeDataString(RegPassword)}" + $"&isStudent={RegIsStudent.ToString().ToLower()}";
+            var response = await Http.PostAsync(url, null);
+            if (response.IsSuccessStatusCode)
+            {
+                RegisterSuccess = "Account aangemaakt! Je kunt nu inloggen.";
+                await Task.Delay(1500);
+                RegFirstName = RegLastName = RegEmail = RegPassword = "";
+                SwitchTo(false);
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                RegisterError = "Er bestaat al een account met dit e-mailadres.";
+            }
+            else
+            {
+                RegisterError = "Er is een fout opgetreden. Probeer het opnieuw.";
+            }
+        }
+        catch
+        {
+            RegisterError = "Kan geen verbinding maken met de server.";
+        }
+        finally
+        {
+            IsRegistering = false;
+        }
+    }
+    // De structuur van het antwoord dat de API teruggeeft na een succesvolle login
+    record LoginResponse(int IdUser, string NameUser, string FirstNameUser);
+}

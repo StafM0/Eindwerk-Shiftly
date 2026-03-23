@@ -1,0 +1,305 @@
+﻿/* ══════════════════════════════════════════════════════
+   Login.razor.css
+   Stijlen voor de login- en registratiepagina van Shiftly.
+   Geen hover-effecten, geen animaties — zo simpel mogelijk.
+   ══════════════════════════════════════════════════════ */
+
+
+/* ── Paginalayout ────────────────────────────────────────
+   Centreert de auth-card verticaal en horizontaal
+   op de volledige schermhoogte.                           */
+.auth-root {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* ── Auth-card ───────────────────────────────────────────
+   De witte/donkere kaart in het midden van het scherm.    */
+.auth-card {
+    width: 480px;
+    background: #111520;
+    border: 1px solid #1e2535;
+    border-radius: 20px;
+    overflow: hidden; /* afgeronde hoeken ook voor inhoud */
+}
+
+
+/* ── Panels ──────────────────────────────────────────────
+   Login en registratie zitten elk in een eigen "panel".
+   Standaard is alleen het loginpaneel zichtbaar.          */
+.panel {
+    padding: 44px 48px 40px;
+}
+
+/* Registratiepaneel is standaard verborgen */
+.panel-register {
+    display: none;
+}
+
+/* Als de card de klasse "flipped" heeft: toon registratie, verberg login */
+.auth-card.flipped ::deep .panel-login {
+    display: none;
+}
+
+.auth-card.flipped ::deep .panel-register {
+    display: block;
+}
+
+/* Als de card NIET "flipped" is: loginpaneel is gewoon zichtbaar */
+.auth-card:not(.flipped) ::deep .panel-login {
+    display: block;
+}
+
+
+/* ── Logo ────────────────────────────────────────────────*/
+.brand {
+    margin-bottom: -25px; /* trekt titel iets omhoog onder het logo */
+}
+
+.brand-logo {
+    height: 100px;
+    width: auto;
+    filter: invert(1); /* logo wit maken op donkere achtergrond */
+    display: block;
+}
+
+
+/* ── Titels ──────────────────────────────────────────────*/
+
+/* Grote titel bovenaan het paneel (bv. "Welkom terug") */
+.panel-title {
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #e8ecf4;
+    margin-bottom: 6px;
+}
+
+/* Ondertitel/subtekst (bv. "Log in op je account") */
+.panel-sub {
+    font-size: 0.875rem;
+    color: #6b7a99;
+    margin-bottom: 28px;
+    line-height: 1.5;
+}
+
+
+/* ── Formuliervelden ─────────────────────────────────────
+   Elk veld heeft een label boven en een input eronder.    */
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+    .field label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #6b7a99;
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    }
+
+    .field input {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #1e2535;
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: #e8ecf4;
+        font-size: 0.88rem;
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+        outline: none;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+        /* Lichtere rand als een veld geselecteerd is */
+        .field input:focus {
+            border-color: #3d7fff;
+        }
+
+
+/* ── Twee velden naast elkaar (voornaam + achternaam) ────*/
+.field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+    /* Verwijder extra marge van velden binnen een field-row */
+    .field-row ::deep .field {
+        margin-bottom: 0;
+    }
+
+
+/* ── Wachtwoord wrapper ──────────────────────────────────
+   Relatieve positie zodat de oogknop absoluut geplaatst
+   kan worden rechts in het invoerveld.                    */
+.pw-wrap {
+    position: relative;
+}
+
+    /* Meer ruimte rechts zodat de oogknop het wachtwoord niet overlapt */
+    .pw-wrap ::deep input {
+        padding-right: 42px;
+    }
+
+/* De oogknop rechts in het wachtwoordveld */
+.pw-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #6b7a99;
+}
+
+
+/* ── Checkbox (student-veld) ─────────────────────────────*/
+
+/* De checkbox-rij staat horizontaal i.p.v. verticaal */
+.checkbox-field {
+    flex-direction: row;
+    align-items: center;
+}
+
+/* Klikbaar label met de tekst "Ik ben student" */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: #e8ecf4;
+    user-select: none; /* voorkomt dat tekst geselecteerd wordt bij klikken */
+}
+
+    /* Verberg de standaard browser-checkbox */
+    .checkbox-label ::deep input[type="checkbox"] {
+        display: none;
+    }
+
+/* Aangepast checkbox-vakje (normaal: grijs kader) */
+.checkbox-custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #1e2535;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.04);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Als de checkbox aangevinkt is: blauw vakje */
+.checkbox-label ::deep input:checked + .checkbox-custom {
+    background: #3d7fff;
+    border-color: #3d7fff;
+}
+
+    /* Vinkje erin als aangevinkt */
+    .checkbox-label ::deep input:checked + .checkbox-custom::after {
+        content: "✓";
+        font-size: 0.7rem;
+        color: #fff;
+        font-weight: 700;
+    }
+
+
+/* ── Primaire knop ───────────────────────────────────────
+   Blauwe knop voor "Inloggen" en "Account aanmaken".      */
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: #3d7fff;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    cursor: pointer;
+    margin-top: 6px;
+}
+
+    /* Uitgeschakelde staat: minder zichtbaar */
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+
+/* ── Schakellink ─────────────────────────────────────────
+   De tekst "Nog geen account? Registreer je" onderaan.    */
+.switch-text {
+    text-align: center;
+    margin-top: 22px;
+    font-size: 0.85rem;
+    color: #6b7a99;
+}
+
+/* De klikbare link in de schakelzin */
+.link-btn {
+    background: none;
+    border: none;
+    color: #3d7fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+
+
+/* ── Fout- en succesmeldingen ────────────────────────────*/
+
+/* Rode foutmelding box */
+.alert-box {
+    background: rgba(224, 82, 82, 0.12);
+    border: 1px solid rgba(224, 82, 82, 0.3);
+    color: #f09090;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+}
+
+/* Groene succesmelding box */
+.success-box {
+    background: rgba(61, 200, 100, 0.10);
+    border: 1px solid rgba(61, 200, 100, 0.3);
+    color: #6edb8f;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+}
+
+
+/* ── Responsive: smalle schermen ─────────────────────────
+   Op telefoons: kaart vult het hele scherm.               */
+@media (max-width: 540px) {
+    .auth-card {
+        width: 100%;
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    .panel {
+        padding: 36px 28px 32px;
+    }
+
+    /* Voornaam en achternaam onder elkaar op kleine schermen */
+    .field-row {
+        grid-template-columns: 1fr;
+    }
+}
