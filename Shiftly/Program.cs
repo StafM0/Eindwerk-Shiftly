@@ -46,6 +46,27 @@ app.MapGet("/GetAllUsers", async (ShiftlyDbContext db) =>
     return Results.Ok(gebruikers);
 }).WithTags("Users");
 
+// GET: User By Id
+app.MapGet("/GetUserById", async (int id, ShiftlyDbContext db) =>
+{
+    var user = await db.Gebruikers
+        .Where(pbl => pbl.IdGebruiker == id)
+        .Select(pbl => new
+        {
+            firstName = pbl.VoorNaamGebruiker,
+            lastName = pbl.NaamGebruiker,
+            email = pbl.EmailGebruiker,
+            isStudent = pbl.IsStudent
+        })
+        .FirstOrDefaultAsync();
+
+    if (user == null)
+        return Results.NotFound();
+
+    return Results.Ok(user);
+}).WithTags("Users");
+
+
 // PUT: Edit User
 app.MapPut("/UpdateUser", async (int id, JsonElement updates, ShiftlyDbContext db) =>
 {
@@ -123,6 +144,7 @@ app.MapDelete("/DeleteUser", async (int userId, ShiftlyDbContext db) =>
 
     return Results.NoContent();
 }).WithTags("Users");
+
 #endregion
 
 #region Shifts
