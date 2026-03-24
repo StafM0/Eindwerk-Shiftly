@@ -6,8 +6,7 @@
 
 <PageTitle>Shiftly – Dashboard</PageTitle>
 
-@if (!_sessionChecked){}
-else if (!_isLoggedIn){}
+@if (!_sessionChecked || !_isLoggedIn) { }
 else if (_isLoading)
 {
     <div class="dash-root">
@@ -41,8 +40,9 @@ else
                     </div>
                     <a class="btn-primary-sm" href="/shift-form">+ Add</a>
                 </div>
+
                 <div class="item-list">
-                    @if (_shifts.Count == 0)
+                    @if (_upcomingShifts.Count == 0)
                     {
                         <div class="item-row">
                             <div class="item-meta">Geen shifts gevonden.</div>
@@ -50,7 +50,7 @@ else
                     }
                     else
                     {
-                        @foreach (var shift in _shifts)
+                        @foreach (var shift in _upcomingShifts)
                         {
                             <div class="item-row">
                                 <div class="item-left">
@@ -80,17 +80,14 @@ else
                             <div class="stat-card">
                                 <div class="stat-label">Gewerkte uren</div>
                                 <div class="stat-value">@FormatHours(_hoursOverview.GewerkteUren)</div>
-                                <div class="stat-desc"></div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Geplande uren</div>
                                 <div class="stat-value">@FormatHours(_hoursOverview.GeplandeUren)</div>
-                                <div class="stat-desc"></div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Nog vrije uren</div>
                                 <div class="stat-value">@FormatHours(_hoursOverview.OverigeUren)</div>
-                                <div class="stat-desc"></div>
                             </div>
                         </div>
                     }
@@ -100,17 +97,14 @@ else
                             <div class="stat-card">
                                 <div class="stat-label">Verdiend</div>
                                 <div class="stat-value">@FormatCurrency(TotalEarnedThisYear)</div>
-                                <div class="stat-desc"></div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Volgende shift</div>
                                 <div class="stat-value">@NextShiftLabel</div>
-                                <div class="stat-desc"></div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Shifts deze maand</div>
                                 <div class="stat-value">@ShiftsThisMonth</div>
-                                <div class="stat-desc"></div>
                             </div>
                         </div>
                     }
@@ -129,6 +123,7 @@ else
                     </div>
                     <a class="btn-link" href="/abonnementen">Bekijk alles</a>
                 </div>
+
                 <div class="item-list">
                     @if (_subscriptions.Count == 0)
                     {
@@ -160,6 +155,7 @@ else
                     </div>
                     <a class="btn-link" href="/wishlist">Bekijk alles</a>
                 </div>
+
                 <div class="wish-grid">
                     @if (_wishlist.Count == 0)
                     {
@@ -187,68 +183,56 @@ else
 }
 
 @code {
-    static readonly System.Globalization.CultureInfo NlBe = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+    private static readonly System.Globalization.CultureInfo NlBe =
+        System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
 
-    bool _sessionChecked = false;
-    bool _isLoggedIn = false;
-    bool _isLoading = true;
-    bool _isStudent;
-    int _userId;
-    string _fullName = "";
-    List<ShiftDto> _allShifts = new();
-    List<ShiftDto> _shifts = new();
-    List<SubscriptionDto> _subscriptions = new();
-    List<WishlistDto> _wishlist = new();
-    HoursOverviewDto _hoursOverview = new();
+    // ── State ─────────────────────────────────────────────────────────────────
+    private bool   _sessionChecked = false;
+    private bool   _isLoggedIn     = false;
+    private bool   _isLoading      = true;
+    private bool   _isStudent;
+    private int    _userId;
+    private string _fullName = "";
 
-    decimal TotalEarnedThisYear => Math.Round(
+    private List<ShiftDto>        _allShifts      = new();
+    private List<ShiftDto>        _upcomingShifts = new();
+    private List<SubscriptionDto> _subscriptions  = new();
+    private List<WishlistDto>     _wishlist        = new();
+    private HoursOverviewDto      _hoursOverview   = new();
+
+    // ── Computed ──────────────────────────────────────────────────────────────
+
+    private decimal TotalEarnedThisYear => Math.Round(
         _allShifts
             .Where(IsWorkedShiftThisYear)
             .Sum(s => NetHours(s) * (s.Uurloon ?? 0m)),
         2);
 
-    int ShiftsThisMonth => _allShifts.Count(s =>
-        s.StartDateTime.Year == DateTime.Today.Year &&
+    private int ShiftsThisMonth => _allShifts.Count(s =>
+        s.StartDateTime.Year  == DateTime.Today.Year &&
         s.StartDateTime.Month == DateTime.Today.Month);
 
-    string NextShiftLabel
+    private string NextShiftLabel
     {
         get
         {
-            var nextShift = _allShifts
+            var next = _allShifts
                 .Where(s => s.StartDateTime > DateTime.Now)
                 .OrderBy(s => s.StartDateTime)
                 .FirstOrDefault();
 
-            if (nextShift is null)
-                return "Geen shift";
+            if (next is null) return "Geen shift";
 
-            var days = (nextShift.StartDateTime.Date - DateTime.Today).Days;
-
-            return days switch
+            return (next.StartDateTime.Date - DateTime.Today).Days switch
             {
                 0 => "Vandaag",
                 1 => "Morgen",
-                _ => $"Over {days} dagen"
+                var d => $"Over {d} dagen"
             };
         }
     }
 
-    string NextShiftSubLabel
-    {
-        get
-        {
-            var nextShift = _allShifts
-                .Where(s => s.StartDateTime > DateTime.Now)
-                .OrderBy(s => s.StartDateTime)
-                .FirstOrDefault();
-
-            if (nextShift is null)
-                return "Nog niets ingepland";
-
-            return $"{nextShift.StartDateTime:ddd dd MMM HH:mm} · {nextShift.WerkplekNaam}";
-        }
-    }
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -256,20 +240,20 @@ else
 
         try
         {
-            var idResult = await SessionStorage.GetAsync<int>("userId");
+            var idResult   = await SessionStorage.GetAsync<int>("userId");
             var nameResult = await SessionStorage.GetAsync<string>("userFullName");
 
             if (idResult.Success && idResult.Value > 0)
             {
-                _userId = idResult.Value;
-                _fullName = nameResult.Success ? nameResult.Value ?? "" : "";
-                _isLoggedIn = true;
+                _userId        = idResult.Value;
+                _fullName      = nameResult.Success ? nameResult.Value ?? "" : "";
+                _isLoggedIn    = true;
                 _sessionChecked = true;
                 await LoadData();
             }
             else
             {
-                _isLoggedIn = false;
+                _isLoggedIn     = false;
                 _sessionChecked = true;
                 StateHasChanged();
                 Navigation.NavigateTo("/", forceLoad: false);
@@ -277,85 +261,75 @@ else
         }
         catch
         {
-            _isLoggedIn = false;
+            _isLoggedIn     = false;
             _sessionChecked = true;
             Navigation.NavigateTo("/", forceLoad: false);
         }
     }
 
-    async Task LoadData()
+    private async Task LoadData()
     {
         _isLoading = true;
         StateHasChanged();
 
         try
         {
-            var userTask = Http.GetFromJsonAsync<UserDto>($"GetUserById?id={_userId}");
-            var shiftsTask = Http.GetFromJsonAsync<List<ShiftDto>>($"GetAllShiftsFromUser?userId={_userId}");
+            var userTask          = Http.GetFromJsonAsync<UserDto>($"GetUserById?id={_userId}");
+            var shiftsTask        = Http.GetFromJsonAsync<List<ShiftDto>>($"GetAllShiftsFromUser?userId={_userId}");
             var subscriptionsTask = Http.GetFromJsonAsync<List<SubscriptionDto>>($"GetAllSubscriptionsFromUser?userId={_userId}");
-            var wishlistTask = Http.GetFromJsonAsync<List<WishlistDto>>($"GetAllWishListItemsFromUser?userId={_userId}");
+            var wishlistTask      = Http.GetFromJsonAsync<List<WishlistDto>>($"GetAllWishListItemsFromUser?userId={_userId}");
 
             await Task.WhenAll(userTask, shiftsTask, subscriptionsTask, wishlistTask);
 
-            _isStudent = userTask.Result?.IsStudent ?? false;
-            _allShifts = shiftsTask.Result ?? new();
-            _shifts = _allShifts
+            _isStudent     = userTask.Result?.IsStudent ?? false;
+            _allShifts     = shiftsTask.Result ?? new();
+            _upcomingShifts = _allShifts
                 .Where(s => s.StartDateTime >= DateTime.Now)
                 .OrderBy(s => s.StartDateTime)
                 .Take(5)
                 .ToList();
             _subscriptions = (subscriptionsTask.Result ?? new()).OrderBy(s => s.PeriodeEinde).ToList();
-            _wishlist = (wishlistTask.Result ?? new()).Where(w => !w.ItemBought).OrderBy(w => w.ItemPriority).ToList();
+            _wishlist      = (wishlistTask.Result ?? new()).Where(w => !w.ItemBought).OrderBy(w => w.ItemPriority).ToList();
 
             if (_isStudent)
-            {
                 _hoursOverview = await Http.GetFromJsonAsync<HoursOverviewDto>($"GetUserHoursOverview?userId={_userId}") ?? new();
-            }
         }
-        catch
-        {
-        }
+        catch { /* errors are handled gracefully by leaving collections empty */ }
 
         _isLoading = false;
         StateHasChanged();
     }
 
-    static decimal NetHours(ShiftDto shift)
+    // ── Pure helpers ──────────────────────────────────────────────────────────
+
+    private static decimal NetHours(ShiftDto s)
     {
-        var hours = (decimal)(shift.EindDateTime - shift.StartDateTime).TotalHours - (shift.PauzeInMinuten / 60m);
-        return hours < 0 ? 0 : Math.Round(hours, 2);
+        var h = (decimal)(s.EindDateTime - s.StartDateTime).TotalHours - s.PauzeInMinuten / 60m;
+        return Math.Round(Math.Max(0, h), 2);
     }
 
-    static bool IsWorkedShiftThisYear(ShiftDto shift)
+    private static bool IsWorkedShiftThisYear(ShiftDto s)
     {
-        var now = DateTime.Now;
-        var startOfYear = new DateTime(now.Year, 1, 1, 0, 0, 0);
-        var startOfNextYear = startOfYear.AddYears(1);
-
-        return shift.EindDateTime <= now
-            && shift.StartDateTime >= startOfYear
-            && shift.StartDateTime < startOfNextYear;
+        var now         = DateTime.Now;
+        var startOfYear = new DateTime(now.Year, 1, 1);
+        return s.EindDateTime <= now && s.StartDateTime >= startOfYear && s.StartDateTime < startOfYear.AddYears(1);
     }
 
-    static string FormatHours(decimal hours) => $"{hours:0.##}u";
+    private static string FormatHours(decimal hours)    => $"{hours:0.##}u";
+    private static string FormatCurrency(decimal amount) => amount.ToString("C", NlBe);
 
-    static string FormatCurrency(decimal amount) => amount.ToString("C", NlBe);
-
-    static string ShiftLabel(DateTime start)
+    private static string ShiftLabel(DateTime start) => (start.Date - DateTime.Today).Days switch
     {
-        var diff = (start.Date - DateTime.Today).Days;
-        return diff switch
-        {
-            0 => "Vandaag",
-            1 => "Morgen",
-            <= 7 => "Deze week",
-            _ => "Volgende week"
-        };
-    }
+        0    => "Vandaag",
+        1    => "Morgen",
+        <= 7 => "Deze week",
+        _    => "Volgende week"
+    };
 
-    static string ShiftBadgeClass(DateTime start) => (start.Date - DateTime.Today).Days < 1 ? "badge badge-blue" : "badge badge-muted";
+    private static string ShiftBadgeClass(DateTime start) =>
+        (start.Date - DateTime.Today).Days < 1 ? "badge badge-blue" : "badge badge-muted";
 
-    static string PriorityLabel(int? prio) => prio switch
+    private static string PriorityLabel(int? prio) => prio switch
     {
         1 => "hoog",
         2 => "medium",
@@ -363,9 +337,11 @@ else
         _ => "?"
     };
 
-    record UserDto(string FirstName, string LastName, string Email, bool IsStudent);
-    record HoursOverviewDto(int Jaar = 0, string? ResetDatum = null, decimal MaximumUren = 650, decimal GewerkteUren = 0, decimal GeplandeUren = 0, decimal OverigeUren = 0);
-    record ShiftDto(int ShiftId, DateTime StartDateTime, DateTime EindDateTime, int PauzeInMinuten, string Functie, string? Opmerking, decimal? Uurloon, sbyte? Betaaldag, int AfdelingId, string WerkplekNaam);
-    record SubscriptionDto(int AbonnementId, string Naam, decimal Prijs, DateOnly PeriodeStart, DateOnly PeriodeEinde, bool Betaald);
-    record WishlistDto(int Idwishlist, string ItemName, decimal? ItemPrice, string? ItemDescription, string? ItemLink, int? ItemPriority, bool ItemBought);
+    // ── DTOs ──────────────────────────────────────────────────────────────────
+
+    private record UserDto(string FirstName, string LastName, string Email, bool IsStudent);
+    private record HoursOverviewDto(int Jaar = 0, string? ResetDatum = null, decimal MaximumUren = 650, decimal GewerkteUren = 0, decimal GeplandeUren = 0, decimal OverigeUren = 0);
+    private record ShiftDto(int ShiftId, DateTime StartDateTime, DateTime EindDateTime, int PauzeInMinuten, string Functie, string? Opmerking, decimal? Uurloon, sbyte? Betaaldag, int AfdelingId, string WerkplekNaam);
+    private record SubscriptionDto(int AbonnementId, string Naam, decimal Prijs, DateOnly PeriodeStart, DateOnly PeriodeEinde, bool Betaald);
+    private record WishlistDto(int Idwishlist, string ItemName, decimal? ItemPrice, string? ItemDescription, string? ItemLink, int? ItemPriority, bool ItemBought);
 }
