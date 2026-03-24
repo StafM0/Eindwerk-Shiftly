@@ -592,6 +592,62 @@ app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
     return Results.Ok(shifts);
 }).WithTags("Other");
 
+app.MapGet("/GetUserHoursOverview", async (int userId, ShiftlyDbContext db) =>
+{
+    var now = DateTime.Now;
+    var startOfYear = new DateTime(now.Year, 1, 1, 0, 0, 0);
+    var startOfNextYear = startOfYear.AddYears(1);
+
+    var maximumStudentUren = await db.Shiftlies
+        .Where(s => s.FkGebruiker == userId)
+        .Select(s => s.MaximumStudentUren ?? 650)
+        .FirstOrDefaultAsync();
+
+    if (maximumStudentUren <= 0)
+        maximumStudentUren = 650;
+
+    var shifts = await db.Shifts
+        .Where(s => s.FkGebruikerAbbonomentNavigation.FkGebruiker == userId
+                    && s.StartDateTime >= startOfYear
+                    && s.StartDateTime < startOfNextYear)
+        .Select(s => new
+        {
+            s.StartDateTime,
+            s.EindDateTime,
+            s.PauzeInMinuten
+        })
+        .ToListAsync();
+
+    decimal gewerkteUren = 0;
+    decimal geplandeUren = 0;
+
+    foreach (var shift in shifts)
+    {
+        var nettoUren = (decimal)(shift.EindDateTime - shift.StartDateTime).TotalHours - (shift.PauzeInMinuten / 60m);
+
+        if (nettoUren < 0)
+            nettoUren = 0;
+
+        if (shift.EindDateTime <= now)
+            gewerkteUren += nettoUren;
+        else
+            geplandeUren += nettoUren;
+    }
+
+    gewerkteUren = Math.Round(gewerkteUren, 2);
+    geplandeUren = Math.Round(geplandeUren, 2);
+
+    return Results.Ok(new
+    {
+        Jaar = now.Year,
+        ResetDatum = startOfNextYear.ToString("yyyy-MM-dd"),
+        MaximumUren = maximumStudentUren,
+        GewerkteUren = gewerkteUren,
+        GeplandeUren = geplandeUren,
+        OverigeUren = Math.Round(Math.Max(0, maximumStudentUren - gewerkteUren - geplandeUren), 2)
+    });
+}).WithTags("Other");
+
 app.MapGet("/GetDepartmentsForUser", async (int userId, ShiftlyDbContext db) =>
 {
     var departments = await db.Gebruikerafdelings

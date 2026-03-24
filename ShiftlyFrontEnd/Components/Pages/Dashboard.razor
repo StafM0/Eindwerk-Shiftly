@@ -72,21 +72,49 @@ else
             <section class="card">
                 <div class="overview-box">
                     <h2 class="card-title">Overzicht</h2>
-                    <p class="card-sub">Een overzicht van jouw: </p>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-label">Gewerkte uuren</div>
-                            <div class="stat-value">50</div>
+                    <p class="card-sub">Een overzicht van jouw werk.</p>
+
+                    @if (_isStudent)
+                    {
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Gewerkte uren</div>
+                                <div class="stat-value">@FormatHours(_hoursOverview.GewerkteUren)</div>
+                                <div class="stat-desc"></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Geplande uren</div>
+                                <div class="stat-value">@FormatHours(_hoursOverview.GeplandeUren)</div>
+                                <div class="stat-desc"></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Nog vrije uren</div>
+                                <div class="stat-value">@FormatHours(_hoursOverview.OverigeUren)</div>
+                                <div class="stat-desc"></div>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Geplande uuren</div>
-                            <div class="stat-value">50</div>
+                    }
+                    else
+                    {
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Verdiend</div>
+                                <div class="stat-value">@FormatCurrency(TotalEarnedThisYear)</div>
+                                <div class="stat-desc"></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Volgende shift</div>
+                                <div class="stat-value">@NextShiftLabel</div>
+                                <div class="stat-desc"></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Shifts deze maand</div>
+                                <div class="stat-value">@ShiftsThisMonth</div>
+                                <div class="stat-desc"></div>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Overige uuren</div>
-                            <div class="stat-value">550</div>
-                        </div>
-                    </div>
+                    }
+
                     <div class="tip-box">
                         Tip: hou het simpel. Plan je shifts, check je abonnementen, en werk naar je wishlist toe.
                     </div>
@@ -159,29 +187,78 @@ else
 }
 
 @code {
+    static readonly System.Globalization.CultureInfo NlBe = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+
     bool _sessionChecked = false;
     bool _isLoggedIn = false;
     bool _isLoading = true;
+    bool _isStudent;
     int _userId;
     string _fullName = "";
+    List<ShiftDto> _allShifts = new();
     List<ShiftDto> _shifts = new();
     List<SubscriptionDto> _subscriptions = new();
     List<WishlistDto> _wishlist = new();
+    HoursOverviewDto _hoursOverview = new();
 
-    // Telt hoeveel shifts er deze week zijn gepland
-    int ShiftsThisWeek => _shifts.Count(s => s.StartDateTime >= DateTime.Today && s.StartDateTime < DateTime.Today.AddDays(7 - (int)DateTime.Today.DayOfWeek + 1));
+    decimal TotalEarnedThisYear => Math.Round(
+        _allShifts
+            .Where(IsWorkedShiftThisYear)
+            .Sum(s => NetHours(s) * (s.Uurloon ?? 0m)),
+        2);
 
-    // Telt hoeveel abonnementen nog niet betaald zijn
-    int OpenSubscriptions => _subscriptions.Count(s => !s.Betaald);
+    int ShiftsThisMonth => _allShifts.Count(s =>
+        s.StartDateTime.Year == DateTime.Today.Year &&
+        s.StartDateTime.Month == DateTime.Today.Month);
 
-    // Wordt aangeroepen na de eerste render — pas dan kunnen we sessie lezen via JS
+    string NextShiftLabel
+    {
+        get
+        {
+            var nextShift = _allShifts
+                .Where(s => s.StartDateTime > DateTime.Now)
+                .OrderBy(s => s.StartDateTime)
+                .FirstOrDefault();
+
+            if (nextShift is null)
+                return "Geen shift";
+
+            var days = (nextShift.StartDateTime.Date - DateTime.Today).Days;
+
+            return days switch
+            {
+                0 => "Vandaag",
+                1 => "Morgen",
+                _ => $"Over {days} dagen"
+            };
+        }
+    }
+
+    string NextShiftSubLabel
+    {
+        get
+        {
+            var nextShift = _allShifts
+                .Where(s => s.StartDateTime > DateTime.Now)
+                .OrderBy(s => s.StartDateTime)
+                .FirstOrDefault();
+
+            if (nextShift is null)
+                return "Nog niets ingepland";
+
+            return $"{nextShift.StartDateTime:ddd dd MMM HH:mm} · {nextShift.WerkplekNaam}";
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+
         try
         {
             var idResult = await SessionStorage.GetAsync<int>("userId");
             var nameResult = await SessionStorage.GetAsync<string>("userFullName");
+
             if (idResult.Success && idResult.Value > 0)
             {
                 _userId = idResult.Value;
@@ -210,22 +287,59 @@ else
     {
         _isLoading = true;
         StateHasChanged();
+
         try
         {
-            var t1 = Http.GetFromJsonAsync<List<ShiftDto>>($"GetAllShiftsFromUser?userId={_userId}");
-            var t2 = Http.GetFromJsonAsync<List<SubscriptionDto>>($"GetAllSubscriptionsFromUser?userId={_userId}");
-            var t3 = Http.GetFromJsonAsync<List<WishlistDto>>($"GetAllWishListItemsFromUser?userId={_userId}");
-            await Task.WhenAll(t1, t2, t3);
+            var userTask = Http.GetFromJsonAsync<UserDto>($"GetUserById?id={_userId}");
+            var shiftsTask = Http.GetFromJsonAsync<List<ShiftDto>>($"GetAllShiftsFromUser?userId={_userId}");
+            var subscriptionsTask = Http.GetFromJsonAsync<List<SubscriptionDto>>($"GetAllSubscriptionsFromUser?userId={_userId}");
+            var wishlistTask = Http.GetFromJsonAsync<List<WishlistDto>>($"GetAllWishListItemsFromUser?userId={_userId}");
 
-            _shifts = (t1.Result ?? new()).Where(s => s.StartDateTime >= DateTime.Now).OrderBy(s => s.StartDateTime).Take(5).ToList();
-            _subscriptions = (t2.Result ?? new()).OrderBy(s => s.PeriodeEinde).ToList();
-            _wishlist = (t3.Result ?? new()).Where(w => !w.ItemBought).OrderBy(w => w.ItemPriority).ToList();
+            await Task.WhenAll(userTask, shiftsTask, subscriptionsTask, wishlistTask);
+
+            _isStudent = userTask.Result?.IsStudent ?? false;
+            _allShifts = shiftsTask.Result ?? new();
+            _shifts = _allShifts
+                .Where(s => s.StartDateTime >= DateTime.Now)
+                .OrderBy(s => s.StartDateTime)
+                .Take(5)
+                .ToList();
+            _subscriptions = (subscriptionsTask.Result ?? new()).OrderBy(s => s.PeriodeEinde).ToList();
+            _wishlist = (wishlistTask.Result ?? new()).Where(w => !w.ItemBought).OrderBy(w => w.ItemPriority).ToList();
+
+            if (_isStudent)
+            {
+                _hoursOverview = await Http.GetFromJsonAsync<HoursOverviewDto>($"GetUserHoursOverview?userId={_userId}") ?? new();
+            }
         }
-        catch{}
+        catch
+        {
+        }
 
         _isLoading = false;
         StateHasChanged();
     }
+
+    static decimal NetHours(ShiftDto shift)
+    {
+        var hours = (decimal)(shift.EindDateTime - shift.StartDateTime).TotalHours - (shift.PauzeInMinuten / 60m);
+        return hours < 0 ? 0 : Math.Round(hours, 2);
+    }
+
+    static bool IsWorkedShiftThisYear(ShiftDto shift)
+    {
+        var now = DateTime.Now;
+        var startOfYear = new DateTime(now.Year, 1, 1, 0, 0, 0);
+        var startOfNextYear = startOfYear.AddYears(1);
+
+        return shift.EindDateTime <= now
+            && shift.StartDateTime >= startOfYear
+            && shift.StartDateTime < startOfNextYear;
+    }
+
+    static string FormatHours(decimal hours) => $"{hours:0.##}u";
+
+    static string FormatCurrency(decimal amount) => amount.ToString("C", NlBe);
 
     static string ShiftLabel(DateTime start)
     {
@@ -249,7 +363,9 @@ else
         _ => "?"
     };
 
-    record ShiftDto(int ShiftId, DateTime StartDateTime, DateTime EindDateTime, int PauzeInMinuten, string Functie, string? Opmerking, decimal? Uurloon, sbyte? Betaaldag, int AfdelingId, string WerkplekNaam); 
-    record SubscriptionDto(int AbonnementId, string Naam, decimal Prijs, DateOnly PeriodeStart, DateOnly PeriodeEinde, bool Betaald); 
+    record UserDto(string FirstName, string LastName, string Email, bool IsStudent);
+    record HoursOverviewDto(int Jaar = 0, string? ResetDatum = null, decimal MaximumUren = 650, decimal GewerkteUren = 0, decimal GeplandeUren = 0, decimal OverigeUren = 0);
+    record ShiftDto(int ShiftId, DateTime StartDateTime, DateTime EindDateTime, int PauzeInMinuten, string Functie, string? Opmerking, decimal? Uurloon, sbyte? Betaaldag, int AfdelingId, string WerkplekNaam);
+    record SubscriptionDto(int AbonnementId, string Naam, decimal Prijs, DateOnly PeriodeStart, DateOnly PeriodeEinde, bool Betaald);
     record WishlistDto(int Idwishlist, string ItemName, decimal? ItemPrice, string? ItemDescription, string? ItemLink, int? ItemPriority, bool ItemBought);
 }
