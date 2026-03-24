@@ -1,0 +1,474 @@
+﻿@page "/wishlist"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedSessionStorage SessionStorage
+
+<PageTitle>Shiftly – Wishlist</PageTitle>
+
+@if (!_sessionChecked)
+{
+}
+else if (!_isLoggedIn)
+{
+}
+else if (_isLoading)
+{
+    <div class="wishlist-shell">
+        <div class="page-state">Laden…</div>
+    </div>
+}
+else
+{
+    <div class="wishlist-shell">
+        <header class="topbar">
+            <div class="brand">
+                <img src="/ShiftlyLogo.png" class="brand-logo" alt="Shiftly" />
+            </div>
+
+            <nav class="nav-pill">
+                <a class="nav-item" href="/dashboard">Dashboard</a>
+                <a class="nav-item" href="/shifts">Shifts</a>
+                <a class="nav-item is-active" href="/wishlist">Wishlist</a>
+                <a class="nav-item" href="/abonnementen">Abonnementen</a>
+            </nav>
+
+            <div class="top-actions">
+                <a class="user-chip" href="/user">@_fullName</a>
+            </div>
+        </header>
+
+        <div class="wishlist-overview">
+            <section class="overview-card">
+                <div class="overview-label">Totaal items</div>
+                <div class="overview-value">@_items.Count</div>
+            </section>
+
+            <section class="overview-card">
+                <div class="overview-label">Nog open</div>
+                <div class="overview-value">@_items.Count(x => !x.ItemBought)</div>
+            </section>
+
+            <section class="overview-card">
+                <div class="overview-label">Gehaald</div>
+                <div class="overview-value">@_items.Count(x => x.ItemBought)</div>
+            </section>
+        </div>
+
+        <div class="wishlist-page">
+            <section class="card form-card">
+                <div class="card-header">
+                    <h2 class="card-title">@(_isEditMode ? "Wishlist-item bewerken" : "Wishlist-item toevoegen")</h2>
+                    <p class="card-sub">Hou bij waar je naartoe werkt en wat je al bereikt hebt.</p>
+                </div>
+
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(_success))
+                    {
+                        <div class="message success">@_success</div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_error))
+                    {
+                        <div class="message error">@_error</div>
+                    }
+
+                    <EditForm Model="_model" OnValidSubmit="SaveItem">
+                        <div class="form-grid">
+                            <div class="field full-width">
+                                <label for="name">Naam item</label>
+                                <input id="name" type="text" class="form-input" @bind="_model.ItemName" />
+                            </div>
+
+                            <div class="field full-width">
+                                <label for="description">Omschrijving</label>
+                                <textarea id="description" class="form-input textarea" @bind="_model.ItemDescription"></textarea>
+                            </div>
+
+                            <div class="form-row-3 full-width">
+                                <div class="field">
+                                    <label for="price">Prijs (€)</label>
+                                    <input id="price" type="number" step="0.01" class="form-input" @bind="_model.ItemPrice" />
+                                </div>
+
+                                <div class="field">
+                                    <label for="priority">Prioriteit</label>
+                                    <select id="priority" class="form-input" value="@_model.ItemPriorityString" @onchange="OnPriorityChanged">
+                                        <option value="">Kies prioriteit</option>
+                                        <option value="1">Laag</option>
+                                        <option value="2">Middel</option>
+                                        <option value="3">Hoog</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <label for="link">Link</label>
+                                    <input id="link" type="text" class="form-input" @bind="_model.ItemLink" />
+                                </div>
+                            </div>
+
+                            <div class="toggle-row full-width">
+                                <label class="toggle-label">
+                                    <input type="checkbox" @bind="_model.ItemBought" />
+                                    Item al gehaald
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            @if (_isEditMode)
+                            {
+                                <button type="button" class="btn" @onclick="CancelEdit">Annuleren</button>
+                            }
+
+                            <button type="submit" class="btn btn-primary">
+                                @(_isEditMode ? "Opslaan" : "Toevoegen")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </section>
+
+            <section class="card list-card">
+                <div class="card-header list-header">
+                    <div>
+                        <h2 class="card-title">Jouw wishlist</h2>
+                        <p class="card-sub">Alle items die je nog wil kopen of al hebt gehaald.</p>
+                    </div>
+
+                    <button type="button" class="btn" @onclick="ToggleBoughtItems">
+                        @(_showBoughtItems ? "Verberg gehaald" : "Toon gehaald")
+                    </button>
+                </div>
+
+                <div class="card-body">
+                    @if (_items.Count == 0)
+                    {
+                        <div class="empty-state">Nog geen wishlist-items toegevoegd.</div>
+                    }
+                    else if (!_items.Any(x => _showBoughtItems || !x.ItemBought))
+                    {
+                        <div class="empty-state">Geen zichtbare items in je wishlist.</div>
+                    }
+                    else
+                    {
+                        <div class="wishlist-list">
+                            @foreach (var item in _items
+                                                            .Where(x => _showBoughtItems || !x.ItemBought)
+                                                            .OrderBy(x => x.ItemBought)
+                                                            .ThenByDescending(x => x.ItemPriority ?? 0)
+                                                            .ThenBy(x => x.ItemName))
+                            {
+                                <article class="wishlist-item">
+                                    <div class="wishlist-top">
+                                        <div class="wishlist-title-wrap">
+                                            <h3 class="wishlist-title">@item.ItemName</h3>
+
+                                            @if (!string.IsNullOrWhiteSpace(item.ItemDescription))
+                                            {
+                                                <p class="wishlist-subtitle">@item.ItemDescription</p>
+                                            }
+                                        </div>
+
+                                        <div class="wishlist-price">
+                                            € @item.ItemPrice.ToString("0.00")
+                                        </div>
+                                    </div>
+
+                                    <div class="wishlist-meta">
+                                        <span class="wishlist-badge">@PriorityLabel(item.ItemPriority)</span>
+
+                                        @if (item.ItemBought)
+                                        {
+                                            <span class="wishlist-badge bought">Gehaald</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="wishlist-badge open">Open</span>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(item.ItemLink))
+                                        {
+                                            <a class="wishlist-link" href="@item.ItemLink" target="_blank">Open link</a>
+                                        }
+                                    </div>
+
+                                    <div class="wishlist-actions">
+                                        <button type="button" class="btn" @onclick="@(async () => await ToggleBought(item))">
+                                            @(item.ItemBought ? "Zet open" : "Zet gehaald")
+                                        </button>
+
+                                        <button type="button" class="btn" @onclick="@(() => StartEdit(item))">
+                                            Edit
+                                        </button>
+
+                                        <button type="button" class="btn btn-danger" @onclick="@(async () => await DeleteItem(item.IdWishlist))">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _sessionChecked;
+    private bool _isLoggedIn;
+    private bool _isLoading = true;
+    private bool _isEditMode;
+    private bool _showBoughtItems = false;
+    private int _userId;
+    private string _fullName = "";
+    private string _success = string.Empty;
+    private string _error = string.Empty;
+
+    private WishlistFormModel _model = new();
+
+    private List<WishlistItemDto> _items = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            var idResult = await SessionStorage.GetAsync<int>("userId");
+            var nameResult = await SessionStorage.GetAsync<string>("userFullName");
+
+            _sessionChecked = true;
+
+            if (!idResult.Success || idResult.Value <= 0)
+            {
+                _isLoggedIn = false;
+                _isLoading = false;
+                Navigation.NavigateTo("/");
+                StateHasChanged();
+                return;
+            }
+
+            _userId = idResult.Value;
+            _fullName = nameResult.Success ? nameResult.Value ?? "" : "";
+            _isLoggedIn = true;
+
+            await LoadItems();
+
+            _isLoading = false;
+            StateHasChanged();
+        }
+        catch
+        {
+            _isLoggedIn = false;
+            _sessionChecked = true;
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task LoadItems()
+    {
+        try
+        {
+            _items = await Http.GetFromJsonAsync<List<WishlistItemDto>>($"GetAllWishListItemsFromUser?userId={_userId}") ?? new();
+        }
+        catch
+        {
+            _items = new();
+        }
+    }
+
+    private void OnPriorityChanged(ChangeEventArgs e)
+    {
+        _model.ItemPriorityString = e.Value?.ToString() ?? "";
+    }
+
+    private async Task SaveItem()
+    {
+        _success = string.Empty;
+        _error = string.Empty;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_model.ItemName))
+            {
+                _error = "Geef een naam voor het item.";
+                return;
+            }
+
+            if (_isEditMode)
+            {
+                var updateBody = new
+                {
+                    name = _model.ItemName,
+                    description = _model.ItemDescription,
+                    price = _model.ItemPrice,
+                    link = _model.ItemLink,
+                    priority = string.IsNullOrWhiteSpace(_model.ItemPriorityString) ? null : _model.ItemPriorityString,
+                    bought = _model.ItemBought
+                };
+
+                var response = await Http.PutAsJsonAsync($"UpdateWishListItem?id={_model.IdWishlist}", updateBody);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _error = "Kon het item niet opslaan.";
+                    return;
+                }
+
+                _success = "Wishlist-item aangepast.";
+            }
+            else
+            {
+                var url =
+                    $"AddWishListItem?userId={_userId}" +
+                    $"&name={Uri.EscapeDataString(_model.ItemName ?? string.Empty)}" +
+                    $"&description={Uri.EscapeDataString(_model.ItemDescription ?? string.Empty)}" +
+                    $"&price={_model.ItemPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+                    $"&link={Uri.EscapeDataString(_model.ItemLink ?? string.Empty)}" +
+                    $"&prio={Uri.EscapeDataString(_model.ItemPriorityString ?? string.Empty)}" +
+                    $"&made={_model.ItemBought}";
+
+                var response = await Http.PostAsJsonAsync(url, new { });
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _error = "Kon het item niet toevoegen.";
+                    return;
+                }
+
+                _success = "Wishlist-item toegevoegd.";
+            }
+
+            await LoadItems();
+            ResetForm();
+        }
+        catch
+        {
+            _error = "Er ging iets mis bij het opslaan.";
+        }
+    }
+
+    private void StartEdit(WishlistItemDto item)
+    {
+        _isEditMode = true;
+
+        _model = new WishlistFormModel
+        {
+            IdWishlist = item.IdWishlist,
+            ItemName = item.ItemName,
+            ItemDescription = item.ItemDescription ?? "",
+            ItemPrice = item.ItemPrice,
+            ItemLink = item.ItemLink ?? "",
+            ItemPriorityString = item.ItemPriority?.ToString() ?? "",
+            ItemBought = item.ItemBought
+        };
+
+        _success = string.Empty;
+        _error = string.Empty;
+    }
+
+    private async Task ToggleBought(WishlistItemDto item)
+    {
+        try
+        {
+            var updateBody = new
+            {
+                name = item.ItemName,
+                description = item.ItemDescription,
+                price = item.ItemPrice,
+                link = item.ItemLink,
+                priority = item.ItemPriority,
+                bought = !item.ItemBought
+            };
+
+            var response = await Http.PutAsJsonAsync($"UpdateWishListItem?id={item.IdWishlist}", updateBody);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadItems();
+            }
+        }
+        catch
+        {
+            _error = "Kon de status niet aanpassen.";
+        }
+    }
+
+    private async Task DeleteItem(int idWishlist)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"DeleteWishListItem?itemId={idWishlist}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadItems();
+
+                if (_model.IdWishlist == idWishlist)
+                {
+                    ResetForm();
+                }
+            }
+        }
+        catch
+        {
+            _error = "Kon het item niet verwijderen.";
+        }
+    }
+
+    private void ToggleBoughtItems()
+    {
+        _showBoughtItems = !_showBoughtItems;
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        _isEditMode = false;
+        _success = string.Empty;
+        _error = string.Empty;
+
+        _model = new WishlistFormModel();
+    }
+
+    private static string PriorityLabel(int? priority)
+    {
+        return priority switch
+        {
+            1 => "Laag",
+            2 => "Middel",
+            3 => "Hoog",
+            _ => "Geen prioriteit"
+        };
+    }
+
+    private class WishlistFormModel
+    {
+        public int IdWishlist { get; set; }
+        public string ItemName { get; set; } = string.Empty;
+        public string ItemDescription { get; set; } = string.Empty;
+        public decimal ItemPrice { get; set; }
+        public string ItemLink { get; set; } = string.Empty;
+        public string ItemPriorityString { get; set; } = string.Empty;
+        public bool ItemBought { get; set; }
+    }
+
+    private class WishlistItemDto
+    {
+        public int IdWishlist { get; set; }
+        public string ItemName { get; set; } = string.Empty;
+        public decimal ItemPrice { get; set; }
+        public string? ItemDescription { get; set; }
+        public string? ItemLink { get; set; }
+        public int? ItemPriority { get; set; }
+        public bool ItemBought { get; set; }
+    }
+}
