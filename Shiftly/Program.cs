@@ -92,17 +92,25 @@ app.MapPut("/UpdateUser", async (int id, JsonElement updates, ShiftlyDbContext d
 }).WithTags("Users");
 
 // PUT: Change Password
-app.MapPut("/ChangePassword", async (int userId, string password, ShiftlyDbContext db) =>
+app.MapPut("/ChangePassword", async (int userId, string currentPassword, string newPassword, ShiftlyDbContext db) =>
 {
     var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
-    if (user == null)
-        return Results.NotFound();
 
-    user.WachtwoordGebruiker = password;
+    if (user == null)
+        return Results.NotFound(new { message = "Gebruiker niet gevonden." });
+
+    if (string.IsNullOrWhiteSpace(currentPassword) || string.IsNullOrWhiteSpace(newPassword))
+        return Results.BadRequest(new { message = "Vul huidig en nieuw wachtwoord in." });
+
+    if (user.WachtwoordGebruiker != currentPassword)
+        return Results.BadRequest(new { message = "Huidig wachtwoord is onjuist." });
+
+    user.WachtwoordGebruiker = newPassword;
     user.UpdatedAt = DateTime.Now;
 
     await db.SaveChangesAsync();
-    return Results.Ok(new { message = user.WachtwoordGebruiker });
+
+    return Results.Ok(new { message = "Wachtwoord succesvol gewijzigd." });
 }).WithTags("Users");
 
 // POST: Add User

@@ -23,250 +23,197 @@ else
     <div class="dash-root">
         <header class="topbar">
             <div class="brand">
-                <img src="/ShiftlyLogo.png" class="brand-logo" alt="Shiftly" />
+                <img src="/ShiftlyLogo.png" class="brand-logo" alt="Shiftly logo" />
             </div>
-
             <nav class="nav-pill">
                 <a class="nav-item" href="/dashboard">Dashboard</a>
                 <a class="nav-item" href="/shifts">Shifts</a>
                 <a class="nav-item" href="/wishlist">Wishlist</a>
                 <a class="nav-item" href="/abonnementen">Abonnementen</a>
             </nav>
-
             <div class="top-actions">
                 <a class="btn-ghost" href="/user">@_fullName</a>
-                <button type="button" class="logout-btn" @onclick="Logout">Uitloggen</button>
             </div>
         </header>
 
         <main class="profile-page">
             <section class="profile-card">
-                <div class="section-header">
-                    <h1>Mijn profiel</h1>
-                    <p>Beheer hier je accountgegevens.</p>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(_message))
+                @if (!string.IsNullOrWhiteSpace(_profileMessage))
                 {
-                    <div class="message success">@_message</div>
+                    <div class="message success">@_profileMessage</div>
                 }
-
-                @if (!string.IsNullOrWhiteSpace(_error))
+                @if (!string.IsNullOrWhiteSpace(_profileError))
                 {
-                    <div class="message error">@_error</div>
+                    <div class="message error">@_profileError</div>
                 }
 
                 <EditForm Model="_userModel" OnValidSubmit="SaveProfile">
-                    <div class="form-grid">
-                        <div class="field">
-                            <label>Voornaam</label>
-                            <input @bind="_userModel.FirstName" disabled="@(!_isEditingProfile)" />
+                    <div class="section-header header-row">
+                        <div>
+                            <h1>Mijn profiel</h1>
+                            <p>Beheer hier je accountgegevens.</p>
                         </div>
-
-                        <div class="field">
-                            <label>Achternaam</label>
-                            <input @bind="_userModel.LastName" disabled="@(!_isEditingProfile)" />
-                        </div>
-
-                        <div class="field full-width">
-                            <label>E-mail</label>
-                            <input type="email" @bind="_userModel.Email" disabled="@(!_isEditingProfile)" />
-                        </div>
-
-                        <div class="field full-width checkbox-field">
-                            <label class="checkbox-label">
-                                <input type="checkbox" @bind="_userModel.IsStudent" disabled="@(!_isEditingProfile)" />
-                                <span>Ik ben student</span>
-                            </label>
+                        <div class="header-actions">
+                            @if (!_isEditingProfile)
+                            {
+                                <button type="button" class="primary-btn" @onclick="StartEditProfile">Bewerk profiel</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="secondary-btn" @onclick="CancelEditProfile">Annuleren</button>
+                                <button type="submit" class="primary-btn">Opslaan</button>
+                            }
                         </div>
                     </div>
 
-                    <div class="button-row">
-                        @if (!_isEditingProfile)
-                        {
-                            <button type="button" class="primary-btn" @onclick="StartEditProfile">Bewerk profiel</button>
-                        }
-                        else
-                        {
-                            <button type="submit" class="primary-btn">Opslaan</button>
-                            <button type="button" class="secondary-btn" @onclick="CancelEditProfile">Annuleren</button>
-                        }
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="firstName">Voornaam</label>
+                            <input id="firstName" @bind="_userModel.FirstName" disabled="@(!_isEditingProfile)" />
+                        </div>
+                        <div class="field">
+                            <label for="lastName">Achternaam</label>
+                            <input id="lastName" @bind="_userModel.LastName" disabled="@(!_isEditingProfile)" />
+                        </div>
+                        <div class="field full-width">
+                            <label for="email">E-mail</label>
+                            <input id="email" @bind="_userModel.Email" disabled="@(!_isEditingProfile)" />
+                        </div>
+                        <div class="field full-width checkbox-field">
+                            <label>Studentenstatus</label>
+                            <div class="checkbox-box">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" @bind="_userModel.IsStudent" disabled="@(!_isEditingProfile)" />
+                                    <span>Ik ben student</span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </EditForm>
             </section>
 
             <section class="profile-card">
-                <div class="section-header">
-                    <h2>Wachtwoord</h2>
-                    <p>Wijzig hier je wachtwoord.</p>
+                @if (!string.IsNullOrWhiteSpace(_passwordMessage))
+                {
+                    <div class="message success">@_passwordMessage</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_passwordError))
+                {
+                    <div class="message error">@_passwordError</div>
+                }
+
+                <div class="section-header header-row">
+                    <div>
+                        <h2>Wachtwoord</h2>
+                        <p>Wijzig hier je wachtwoord.</p>
+                    </div>
+                    <div class="header-actions">
+                        @if (!_showPasswordForm)
+                        {
+                            <button type="button" class="primary-btn" @onclick="OpenPasswordForm">Wijzig wachtwoord</button>
+                        }
+                    </div>
                 </div>
 
-                @if (!_showPasswordForm)
-                {
-                    <div class="button-row">
-                        <button type="button" class="primary-btn" @onclick="OpenPasswordForm">Wijzig wachtwoord</button>
-                    </div>
-                }
-                else
+                @if (_showPasswordForm)
                 {
                     <EditForm Model="_passwordModel" OnValidSubmit="ChangePassword">
                         <div class="form-grid">
-                            <div class="field full-width">
-                                <label>Huidig wachtwoord</label>
-                                <input type="password" @bind="_passwordModel.CurrentPassword" />
+                            <div class="field">
+                                <label for="currentPassword">Huidig wachtwoord</label>
+                                <input id="currentPassword" type="password" @bind="_passwordModel.CurrentPassword" />
                             </div>
-
-                            <div class="field full-width">
-                                <label>Nieuw wachtwoord</label>
-                                <input type="password" @bind="_passwordModel.NewPassword" />
+                            <div class="field">
+                                <label for="newPassword">Nieuw wachtwoord</label>
+                                <input id="newPassword" type="password" @bind="_passwordModel.NewPassword" />
                             </div>
-
                             <div class="field full-width">
-                                <label>Bevestig nieuw wachtwoord</label>
-                                <input type="password" @bind="_passwordModel.ConfirmPassword" />
+                                <label for="confirmPassword">Bevestig nieuw wachtwoord</label>
+                                <input id="confirmPassword" type="password" @bind="_passwordModel.ConfirmPassword" />
                             </div>
                         </div>
 
                         <div class="button-row">
-                            <button type="submit" class="primary-btn">Opslaan</button>
                             <button type="button" class="secondary-btn" @onclick="CancelPasswordForm">Annuleren</button>
+                            <button type="submit" class="primary-btn">Opslaan</button>
                         </div>
                     </EditForm>
                 }
+            </section>
+
+            <section class="profile-card">
+                <button type="button" class="danger-btn" @onclick="Logout">Uitloggen</button>
             </section>
         </main>
     </div>
 }
 
 @code {
-    private bool _sessionChecked = false;
-    private bool _isLoggedIn = false;
-    private bool _isLoading = true;
+    bool _sessionChecked = false;
+    bool _isLoggedIn = false;
+    bool _isLoading = true;
+    bool _isEditingProfile = false;
+    bool _showPasswordForm = false;
 
-    private bool _isEditingProfile = false;
-    private bool _showPasswordForm = false;
+    int _userId;
+    string _fullName = "";
+    string _profileMessage = "";
+    string _profileError = "";
+    string _passwordMessage = "";
+    string _passwordError = "";
 
-    private string _message = string.Empty;
-    private string _error = string.Empty;
+    UserProfileModel _userModel = new();
+    UserProfileModel _originalUserModel = new();
+    ChangePasswordModel _passwordModel = new();
 
-    private int _userId;
-    private string _fullName = "Gebruiker";
-
-    private UserProfileModel _userModel = new();
-    private UserProfileModel _originalUserModel = new();
-    private ChangePasswordModel _passwordModel = new();
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
+
         try
         {
-            var userIdResult = await SessionStorage.GetAsync<int>("userId");
+            var idResult = await SessionStorage.GetAsync<int>("userId");
+            var nameResult = await SessionStorage.GetAsync<string>("userFullName");
 
-            if (!userIdResult.Success || userIdResult.Value <= 0)
+            if (idResult.Success && idResult.Value > 0)
+            {
+                _userId = idResult.Value;
+                _fullName = nameResult.Success ? nameResult.Value ?? "" : "";
+                _isLoggedIn = true;
+                _sessionChecked = true;
+                await LoadUserData();
+            }
+            else
             {
                 _isLoggedIn = false;
                 _sessionChecked = true;
-                Navigation.NavigateTo("/");
-                return;
+                StateHasChanged();
+                Navigation.NavigateTo("/", forceLoad: false);
             }
-
-            _userId = userIdResult.Value;
-            _isLoggedIn = true;
+        }
+        catch
+        {
+            _isLoggedIn = false;
             _sessionChecked = true;
-
-            await LoadUser();
-        }
-        catch (Exception ex)
-        {
-            _error = $"Er ging iets mis bij het laden van je profiel: {ex.Message}";
-        }
-        finally
-        {
-            _isLoading = false;
+            Navigation.NavigateTo("/", forceLoad: false);
         }
     }
 
-    private async Task LoadUser()
+    async Task LoadUserData()
     {
+        _isLoading = true;
+        _profileMessage = "";
+        _profileError = "";
+        StateHasChanged();
+
         try
         {
-            _error = string.Empty;
-            _message = string.Empty;
+            var user = await Http.GetFromJsonAsync<UserProfileModel>($"GetUserById?id={_userId}");
 
-            var response = await Http.GetAsync($"GetUserById?id={_userId}");
-
-            if (!response.IsSuccessStatusCode)
+            if (user is not null)
             {
-                _error = $"Gebruikersgegevens konden niet geladen worden. Status: {(int)response.StatusCode}";
-                return;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<UserDto>();
-
-            if (result is null)
-            {
-                _error = "Gebruikersgegevens konden niet geladen worden.";
-                return;
-            }
-
-            _userModel = new UserProfileModel
-            {
-                FirstName = result.FirstName,
-                LastName = result.LastName,
-                Email = result.Email,
-                IsStudent = result.IsStudent
-            };
-
-            _originalUserModel = new UserProfileModel
-            {
-                FirstName = result.FirstName,
-                LastName = result.LastName,
-                Email = result.Email,
-                IsStudent = result.IsStudent
-            };
-
-            _fullName = $"{result.FirstName} {result.LastName}".Trim();
-        }
-        catch (Exception ex)
-        {
-            _error = $"Gebruikersgegevens konden niet geladen worden: {ex.Message}";
-        }
-    }
-
-    private void StartEditProfile()
-    {
-        _message = string.Empty;
-        _error = string.Empty;
-        _isEditingProfile = true;
-    }
-
-    private void CancelEditProfile()
-    {
-        _message = string.Empty;
-        _error = string.Empty;
-
-        _userModel = new UserProfileModel
-        {
-            FirstName = _originalUserModel.FirstName,
-            LastName = _originalUserModel.LastName,
-            Email = _originalUserModel.Email,
-            IsStudent = _originalUserModel.IsStudent
-        };
-
-        _isEditingProfile = false;
-    }
-
-    private async Task SaveProfile()
-    {
-        try
-        {
-            _message = string.Empty;
-            _error = string.Empty;
-
-            var response = await Http.PutAsJsonAsync($"UpdateUser?id={_userId}", _userModel);
-
-            if (response.IsSuccessStatusCode)
-            {
+                _userModel = user;
+                _fullName = $"{_userModel.FirstName} {_userModel.LastName}".Trim();
                 _originalUserModel = new UserProfileModel
                 {
                     FirstName = _userModel.FirstName,
@@ -274,90 +221,158 @@ else
                     Email = _userModel.Email,
                     IsStudent = _userModel.IsStudent
                 };
+            }
+        }
+        catch
+        {
+            _profileError = "Profielgegevens konden niet geladen worden.";
+        }
 
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    void StartEditProfile()
+    {
+        _profileMessage = "";
+        _profileError = "";
+        _originalUserModel = new UserProfileModel
+        {
+            FirstName = _userModel.FirstName,
+            LastName = _userModel.LastName,
+            Email = _userModel.Email,
+            IsStudent = _userModel.IsStudent
+        };
+        _isEditingProfile = true;
+    }
+
+    void CancelEditProfile()
+    {
+        _profileMessage = "";
+        _profileError = "";
+        _userModel = new UserProfileModel
+        {
+            FirstName = _originalUserModel.FirstName,
+            LastName = _originalUserModel.LastName,
+            Email = _originalUserModel.Email,
+            IsStudent = _originalUserModel.IsStudent
+        };
+        _isEditingProfile = false;
+    }
+
+    async Task SaveProfile()
+    {
+        _profileMessage = "";
+        _profileError = "";
+
+        try
+        {
+            var payload = new
+            {
+                name = _userModel.LastName,
+                firstName = _userModel.FirstName,
+                email = _userModel.Email,
+                isStudent = _userModel.IsStudent
+            };
+
+            var response = await Http.PutAsJsonAsync($"UpdateUser?id={_userId}", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
                 _fullName = $"{_userModel.FirstName} {_userModel.LastName}".Trim();
-
-                await SessionStorage.SetAsync("userFirstName", _userModel.FirstName);
                 await SessionStorage.SetAsync("userFullName", _fullName);
-
+                _originalUserModel = new UserProfileModel
+                {
+                    FirstName = _userModel.FirstName,
+                    LastName = _userModel.LastName,
+                    Email = _userModel.Email,
+                    IsStudent = _userModel.IsStudent
+                };
                 _isEditingProfile = false;
-                _message = "Je profiel werd succesvol opgeslagen.";
+                _profileMessage = "Profiel succesvol opgeslagen.";
             }
             else
             {
-                _error = $"Profiel opslaan is mislukt. Status: {(int)response.StatusCode}";
+                _profileError = "Profiel opslaan is mislukt.";
             }
         }
-        catch (Exception ex)
+        catch
         {
-            _error = $"Er ging iets mis bij het opslaan van je profiel: {ex.Message}";
+            _profileError = "Er ging iets mis bij het opslaan van je profiel.";
         }
     }
 
-    private void OpenPasswordForm()
+    void OpenPasswordForm()
     {
-        _message = string.Empty;
-        _error = string.Empty;
+        _passwordMessage = "";
+        _passwordError = "";
         _showPasswordForm = true;
     }
 
-    private void CancelPasswordForm()
+    void CancelPasswordForm()
     {
-        _message = string.Empty;
-        _error = string.Empty;
+        _passwordMessage = "";
+        _passwordError = "";
         _showPasswordForm = false;
         _passwordModel = new ChangePasswordModel();
     }
 
-    private async Task ChangePassword()
+    async Task ChangePassword()
     {
+        _passwordMessage = "";
+        _passwordError = "";
+
+        if (string.IsNullOrWhiteSpace(_passwordModel.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(_passwordModel.NewPassword) ||
+            string.IsNullOrWhiteSpace(_passwordModel.ConfirmPassword))
+        {
+            _passwordError = "Vul alle wachtwoordvelden in.";
+            return;
+        }
+
+        if (_passwordModel.NewPassword != _passwordModel.ConfirmPassword)
+        {
+            _passwordError = "Nieuw wachtwoord en bevestiging zijn niet hetzelfde.";
+            return;
+        }
+
         try
         {
-            _message = string.Empty;
-            _error = string.Empty;
+            var currentPassword = Uri.EscapeDataString(_passwordModel.CurrentPassword);
+            var newPassword = Uri.EscapeDataString(_passwordModel.NewPassword);
 
-            if (string.IsNullOrWhiteSpace(_passwordModel.CurrentPassword) ||
-                string.IsNullOrWhiteSpace(_passwordModel.NewPassword) ||
-                string.IsNullOrWhiteSpace(_passwordModel.ConfirmPassword))
-            {
-                _error = "Vul alle wachtwoordvelden in.";
-                return;
-            }
-
-            if (_passwordModel.NewPassword != _passwordModel.ConfirmPassword)
-            {
-                _error = "De nieuwe wachtwoorden komen niet overeen.";
-                return;
-            }
-
-            var response = await Http.PutAsJsonAsync($"ChangePassword?id={_userId}", _passwordModel);
+            var response = await Http.PutAsync($"ChangePassword?userId={_userId}&currentPassword={currentPassword}&newPassword={newPassword}", null);
 
             if (response.IsSuccessStatusCode)
             {
+                _passwordMessage = "Wachtwoord succesvol gewijzigd.";
                 _showPasswordForm = false;
                 _passwordModel = new ChangePasswordModel();
-                _message = "Je wachtwoord werd succesvol gewijzigd.";
             }
             else
             {
-                _error = $"Wachtwoord wijzigen is mislukt. Status: {(int)response.StatusCode}";
+                var errorText = await response.Content.ReadAsStringAsync();
+
+                if (!string.IsNullOrWhiteSpace(errorText) && errorText.Contains("Huidig wachtwoord is onjuist"))
+                    _passwordError = "Huidig wachtwoord is onjuist.";
+                else
+                    _passwordError = "Wachtwoord wijzigen is mislukt.";
             }
         }
-        catch (Exception ex)
+        catch
         {
-            _error = $"Er ging iets mis bij het wijzigen van je wachtwoord: {ex.Message}";
+            _passwordError = "Er ging iets mis bij het wijzigen van je wachtwoord.";
         }
     }
 
-    private async Task Logout()
+    async Task Logout()
     {
         await SessionStorage.DeleteAsync("userId");
-        await SessionStorage.DeleteAsync("userFirstName");
         await SessionStorage.DeleteAsync("userFullName");
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/", forceLoad: false);
     }
 
-    public class UserDto
+    class UserProfileModel
     {
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
@@ -365,15 +380,7 @@ else
         public bool IsStudent { get; set; }
     }
 
-    public class UserProfileModel
-    {
-        public string FirstName { get; set; } = "";
-        public string LastName { get; set; } = "";
-        public string Email { get; set; } = "";
-        public bool IsStudent { get; set; }
-    }
-
-    public class ChangePasswordModel
+    class ChangePasswordModel
     {
         public string CurrentPassword { get; set; } = "";
         public string NewPassword { get; set; } = "";

@@ -38,6 +38,7 @@
     backdrop-filter: blur(12px); /* lichte blur achter de topbar */
 }
 
+
 /* Logocontainer links in de topbar */
 .brand {
     min-width: 140px;
