@@ -1,3 +1,4 @@
+/* ── CSS Custom Properties ─────────────────────────────── */
 :root {
     --bg: #0b0e14;
     --surface: #111520;
@@ -6,11 +7,12 @@
     --accent-h: #5b96ff;
     --text: #e8ecf4;
     --muted: #6b7a99;
-    --font-disp: 'DM Sans', 'Segoe UI', sans-serif;
+    --font: 'DM Sans', 'Segoe UI', sans-serif;
     --card-w: 480px;
 }
 
-* {
+/* ── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -20,18 +22,376 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+/* ── Shared Topbar ─────────────────────────────────────── */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(11, 14, 20, 0.75);
+    backdrop-filter: blur(12px);
+}
+
+.brand {
+    min-width: 140px;
+    display: flex;
+    align-items: center;
+}
+
+.brand-logo {
+    width: 50px;
+    height: auto;
+    display: block;
+    filter: invert(1);
+}
+
+/* ── Shared Nav Pill ───────────────────────────────────── */
+.nav-pill {
+    display: flex;
+    gap: 4px;
+    padding: 5px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+}
+
+.nav-item {
+    text-decoration: none;
+    color: var(--muted);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: var(--font);
+    white-space: nowrap;
+}
+
+.nav-item:hover {
+    color: var(--text);
+}
+
+.nav-item.is-active {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.10);
+}
+
+/* ── Shared Top Actions ────────────────────────────────── */
+.top-actions {
+    min-width: 140px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* ── Shared User Chip / Ghost Button ───────────────────── */
+.user-chip,
+.btn-ghost {
+    text-decoration: none;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: var(--font);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+/* ── Shared Card ───────────────────────────────────────── */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.15rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+    margin: 0;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.card-sub {
+    margin: 0.3rem 0 0;
+    color: #9fb0c7;
+    font-size: 0.9rem;
+}
+
+.card-body {
+    padding: 1.15rem;
+}
+
+/* ── Shared Form Elements ──────────────────────────────── */
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.field label {
+    color: #cfd8e6;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.form-input {
+    width: 100%;
+    min-height: 46px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    color: #fff;
+    border-radius: 12px;
+    padding: 0.8rem 0.95rem;
+    font-size: 0.92rem;
+    outline: none;
+    box-sizing: border-box;
+    font-family: var(--font);
+}
+
+.form-input:focus {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.form-input::placeholder {
+    color: #7f8ba0;
+}
+
+textarea.form-input {
+    min-height: 70px;
+    max-height: 140px;
+    resize: vertical;
+}
+
+select.form-input,
+input[type="date"].form-input,
+input[type="datetime-local"].form-input,
+input[type="month"].form-input {
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.form-input,
+select.form-input,
+option {
+    color: #f9fafb;
+}
+
+select.form-input {
+    background: rgba(255, 255, 255, 0.04);
+    color-scheme: dark;
+}
+
+select.form-input option {
+    background-color: var(--surface);
+    color: #f9fafb;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+/* ── Shared Buttons ────────────────────────────────────── */
+.btn,
+.primary-btn,
+.secondary-btn,
+.danger-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+}
+
+.btn {
+    min-height: 44px;
+}
+
+.btn-primary,
+.primary-btn {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-primary:hover,
+.primary-btn:hover {
+    background: var(--accent-h);
+}
+
+.btn:not(.btn-primary):not(.btn-danger),
+.secondary-btn {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    border: 1px solid var(--border);
+}
+
+.btn:not(.btn-primary):not(.btn-danger):hover,
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.btn-danger,
+.danger-btn {
+    background: rgba(224, 82, 82, 0.12);
+    color: #f3a2a2;
+    border: 1px solid rgba(224, 82, 82, 0.25);
+}
+
+.btn-danger:hover,
+.danger-btn:hover {
+    background: rgba(224, 82, 82, 0.18);
+}
+
+.primary-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Shared Messages ───────────────────────────────────── */
+.message {
+    margin-bottom: 0.85rem;
+    padding: 0.8rem 0.9rem;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.message.success {
+    background: rgba(42, 167, 120, 0.15);
+    border: 1px solid rgba(42, 167, 120, 0.25);
+    color: #8ce0b2;
+}
+
+.message.error {
+    background: rgba(224, 82, 82, 0.12);
+    border: 1px solid rgba(224, 82, 82, 0.25);
+    color: #f3a2a2;
+}
+
+/* ── Shared Overview Cards ─────────────────────────────── */
+.overview-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1rem 1.1rem;
+}
+
+.overview-label {
+    margin-bottom: 0.35rem;
+    color: #9fb0c7;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.overview-value {
+    color: #fff;
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+/* ── Shared Loading / Page State ───────────────────────── */
+.page-state {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    color: #aaa;
+    font-size: 1rem;
+}
+
+.loading-text {
+    padding: 2rem;
+    color: #aaa;
+}
+
+/* ── Shared Section Header ─────────────────────────────── */
+.section-header {
+    margin-bottom: 1rem;
+}
+
+.section-header h1,
+.section-header h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.section-header p {
+    margin: 0.3rem 0 0;
+    color: #9fb0c7;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+/* ── Shared Button Row ─────────────────────────────────── */
+.button-row {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+/* ── Shared Item List ──────────────────────────────────── */
+.item-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+.item-left {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.item-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+/* ── Blazor / Bootstrap overrides ──────────────────────── */
 a, .btn-link {
     color: #006bb7;
-}
-
-.btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .content {
@@ -60,9 +420,9 @@ h1:focus {
     color: white;
 }
 
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
-    }
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}
 
 .darker-border-checkbox.form-check-input {
     border-color: #929292;

@@ -123,7 +123,7 @@
 /* ── Main layout ──────────────────────────────────────── */
 .wishlist-page {
     display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-columns: 543px minmax(0, 1fr);
     gap: 1rem;
     padding: 1.5rem;
     align-items: start;
