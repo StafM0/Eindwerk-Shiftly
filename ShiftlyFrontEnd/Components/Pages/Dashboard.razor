@@ -37,9 +37,9 @@ else
                 <div class="card-header">
                     <div>
                         <h2 class="card-title">Opkomende shifts</h2>
-                        <p class="card-sub">Je komende dagen, netjes op een rij.</p>
+                        <p class="card-sub">Je komende dagen</p>
                     </div>
-                    <a class="btn-primary-sm" href="/shift-toevoegen">+ Add</a>
+                    <a class="btn-primary-sm" href="/shift-form">+ Add</a>
                 </div>
                 <div class="item-list">
                     @if (_shifts.Count == 0)
@@ -58,6 +58,7 @@ else
                                     <div class="item-meta">
                                         @shift.StartDateTime.ToString("ddd dd MMM HH:mm") – @shift.EindDateTime.ToString("HH:mm")
                                     </div>
+                                    <div class="item-meta">@shift.WerkplekNaam</div>
                                 </div>
                                 <span class="badge @ShiftBadgeClass(shift.StartDateTime)">
                                     @ShiftLabel(shift.StartDateTime)
@@ -71,22 +72,19 @@ else
             <section class="card">
                 <div class="overview-box">
                     <h2 class="card-title">Overzicht</h2>
-                    <p class="card-sub">Een rustige snapshot van je week.</p>
+                    <p class="card-sub">Een overzicht van jouw: </p>
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <div class="stat-label">Deze week</div>
-                            <div class="stat-value">@ShiftsThisWeek</div>
-                            <div class="stat-desc">Shifts gepland</div>
+                            <div class="stat-label">Gewerkte uuren</div>
+                            <div class="stat-value">50</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">To do</div>
-                            <div class="stat-value">@OpenSubscriptions</div>
-                            <div class="stat-desc">Abonnementen open</div>
+                            <div class="stat-label">Geplande uuren</div>
+                            <div class="stat-value">50</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">Wishlist</div>
-                            <div class="stat-value">@_wishlist.Count</div>
-                            <div class="stat-desc">Items in lijst</div>
+                            <div class="stat-label">Overige uuren</div>
+                            <div class="stat-value">550</div>
                         </div>
                     </div>
                     <div class="tip-box">
@@ -101,6 +99,7 @@ else
                         <h2 class="card-title">Abonnementen</h2>
                         <p class="card-sub">Jouw actieve abonnementen.</p>
                     </div>
+                    <a class="btn-link" href="/abonnementen">Bekijk alles</a>
                 </div>
                 <div class="item-list">
                     @if (_subscriptions.Count == 0)
@@ -250,7 +249,7 @@ else
         _ => "?"
     };
 
-    record ShiftDto(int ShiftId, DateTime StartDateTime, DateTime EindDateTime, int PauzeInMinuten, string Functie, string? Opmerking, decimal? Uurloon, int AfdelingId); 
+    record ShiftDto(int ShiftId, DateTime StartDateTime, DateTime EindDateTime, int PauzeInMinuten, string Functie, string? Opmerking, decimal? Uurloon, sbyte? Betaaldag, int AfdelingId, string WerkplekNaam); 
     record SubscriptionDto(int AbonnementId, string Naam, decimal Prijs, DateOnly PeriodeStart, DateOnly PeriodeEinde, bool Betaald); 
     record WishlistDto(int Idwishlist, string ItemName, decimal? ItemPrice, string? ItemDescription, string? ItemLink, int? ItemPriority, bool ItemBought);
 }

@@ -1,0 +1,607 @@
+@page "/shift-form"
+@page "/shift-form/{ShiftId:int}"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedSessionStorage SessionStorage
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Net.Http.Json
+
+<PageTitle>Shiftly – Shift formulier</PageTitle>
+
+@if (!_sessionChecked)
+{
+}
+else if (!_isLoggedIn)
+{
+}
+else if (_isLoading)
+{
+    <div class="dash-root">
+        <p class="loading-text">Laden…</p>
+    </div>
+}
+else
+{
+    <div class="dash-root">
+        <header class="topbar">
+            <div class="brand">
+                <img src="/ShiftlyLogo.png" class="brand-logo" alt="Shiftly" />
+            </div>
+
+            <nav class="nav-pill">
+                <a class="nav-item" href="/dashboard">Dashboard</a>
+                <a class="nav-item is-active" href="/shifts">Shifts</a>
+                <a class="nav-item" href="/wishlist">Wishlist</a>
+                <a class="nav-item" href="/abonnementen">Abonnementen</a>
+            </nav>
+
+            <div class="top-actions">
+                <a class="btn-ghost" href="/user">@_fullName</a>
+            </div>
+        </header>
+
+        <main class="form-page">
+            <section class="form-card">
+                <div class="section-header">
+                    <h1>@(_isEditMode ? "Shift bewerken" : "Shift toevoegen")</h1>
+                    <p>
+                        Kies een bestaande werkplek en afdeling, of maak eerst een nieuwe werkplek en/of afdeling aan.
+                    </p>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_message))
+                {
+                    <div class="message success">@_message</div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <div class="message error">@_error</div>
+                }
+
+                <EditForm Model="_model" OnValidSubmit="SaveShift">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="functie">Functie</label>
+                            <InputText id="functie" class="form-input" @bind-Value="_model.Functie" />
+                        </div>
+
+                        <div class="field">
+                            <label for="pauze">Pauze (minuten)</label>
+                            <InputNumber id="pauze" class="form-input" @bind-Value="_model.PauzeInMinuten" />
+                        </div>
+
+                        <div class="field">
+                            <label for="start">Start</label>
+                            <input id="start"
+                                   class="form-input"
+                                   type="datetime-local"
+                                   value="@_model.StartDateTimeLocalText"
+                                   @onchange="OnStartChanged" />
+                        </div>
+
+                        <div class="field">
+                            <label for="einde">Einde</label>
+                            <input id="einde"
+                                   class="form-input"
+                                   type="datetime-local"
+                                   value="@_model.EindDateTimeLocalText"
+                                   @onchange="OnEndChanged" />
+                        </div>
+
+                        <div class="field full-width checkbox-group">
+                            <label class="checkbox-row">
+                                <InputCheckbox @bind-Value="_useNewWorkplace" />
+                                <span>Nieuwe werkplek toevoegen</span>
+                            </label>
+                        </div>
+
+                        @if (!_useNewWorkplace)
+                        {
+                            <div class="field full-width">
+                                <label for="werkplekChoice">Werkplek</label>
+                                <select id="werkplekChoice" class="form-input" value="@_model.WerkplekId" @onchange="OnWorkplaceChanged">
+                                    <option value="0">Kies een werkplek</option>
+                                    @foreach (var workplace in _workplaces)
+                                    {
+                                        <option value="@workplace.WerkplekId">@workplace.WerkplekNaam</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="field full-width">
+                                <label for="newWorkplaceName">Naam nieuwe werkplek</label>
+                                <InputText id="newWorkplaceName" class="form-input" @bind-Value="_newWorkplace.Naam" />
+                            </div>
+
+                            <div class="field">
+                                <label for="newWorkplacePostcode">Postcode</label>
+                                <InputText id="newWorkplacePostcode" class="form-input" @bind-Value="_newWorkplace.Postcode" />
+                            </div>
+
+                            <div class="field">
+                                <label for="newWorkplaceGemeente">Gemeente</label>
+                                <InputText id="newWorkplaceGemeente" class="form-input" @bind-Value="_newWorkplace.Gemeente" />
+                            </div>
+
+                            <div class="field full-width">
+                                <label for="newWorkplaceStraatNr">Straat en nummer</label>
+                                <InputText id="newWorkplaceStraatNr" class="form-input" @bind-Value="_newWorkplace.StraatNr" />
+                            </div>
+                        }
+
+                        <div class="field full-width checkbox-group">
+                            <label class="checkbox-row">
+                                <InputCheckbox @bind-Value="_useNewDepartment" />
+                                <span>Nieuwe afdeling typen</span>
+                            </label>
+                        </div>
+
+                        @if (!_useNewDepartment)
+                        {
+                            <div class="field full-width">
+                                <label for="departmentChoice">Afdeling</label>
+                                <InputSelect id="departmentChoice" class="form-input" @bind-Value="_model.GebruikerAfdelingId" disabled="@(_model.WerkplekId <= 0)">
+                                    <option value="0">Kies een afdeling</option>
+                                    @foreach (var department in FilteredDepartments)
+                                    {
+                                        <option value="@department.GebruikerAfdelingId">@department.AfdelingNaam</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="field full-width">
+                                <label for="newDepartment">Nieuwe afdeling</label>
+                                <InputText id="newDepartment" class="form-input" @bind-Value="_newDepartmentName" />
+                            </div>
+                        }
+
+                        <div class="field full-width">
+                            <label for="opmerking">Opmerking</label>
+                            <InputText id="opmerking" class="form-input" @bind-Value="_model.Opmerking" />
+                        </div>
+                    </div>
+
+                    <div class="button-row">
+                        <button type="button" class="secondary-btn" @onclick="GoBack">Annuleren</button>
+                        <button type="submit" class="primary-btn">@(_isEditMode ? "Update" : "Add")</button>
+                    </div>
+                </EditForm>
+            </section>
+        </main>
+    </div>
+}
+
+@code {
+    [Parameter] public int? ShiftId { get; set; }
+
+    private bool _sessionChecked = false;
+    private bool _isLoggedIn = false;
+    private bool _isLoading = true;
+    private bool _useNewDepartment = false;
+    private bool _useNewWorkplace = false;
+    private bool _isEditMode => ShiftId.HasValue;
+
+    private int _userId;
+    private string _fullName = "";
+    private string _message = "";
+    private string _error = "";
+    private string _newDepartmentName = "";
+
+    private ShiftFormModel _model = new();
+    private NewWorkplaceModel _newWorkplace = new();
+    private List<UserDepartmentDto> _departments = new();
+    private List<WorkplaceDto> _workplaces = new();
+
+    private IEnumerable<UserDepartmentDto> FilteredDepartments =>
+        _departments.Where(d => d.WerkplekId == _model.WerkplekId)
+                    .OrderBy(d => d.AfdelingNaam);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            var idResult = await SessionStorage.GetAsync<int>("userId");
+            var nameResult = await SessionStorage.GetAsync<string>("userFullName");
+
+            if (idResult.Success && idResult.Value > 0)
+            {
+                _userId = idResult.Value;
+                _fullName = nameResult.Success ? nameResult.Value ?? "" : "";
+                _isLoggedIn = true;
+                _sessionChecked = true;
+
+                await LoadWorkplaces();
+                await LoadDepartments();
+
+                if (_isEditMode)
+                {
+                    await LoadShift();
+                }
+                else
+                {
+                    if (_workplaces.Count == 1)
+                    {
+                        _model.WerkplekId = _workplaces[0].WerkplekId;
+                    }
+
+                    if (!_departments.Any())
+                    {
+                        _useNewDepartment = true;
+                    }
+                }
+
+                _isLoading = false;
+                StateHasChanged();
+            }
+            else
+            {
+                _isLoggedIn = false;
+                _sessionChecked = true;
+                _isLoading = false;
+                StateHasChanged();
+                Navigation.NavigateTo("/", forceLoad: false);
+            }
+        }
+        catch
+        {
+            _isLoggedIn = false;
+            _sessionChecked = true;
+            _isLoading = false;
+            Navigation.NavigateTo("/", forceLoad: false);
+        }
+    }
+
+    private async Task LoadWorkplaces()
+    {
+        try
+        {
+            _workplaces = await Http.GetFromJsonAsync<List<WorkplaceDto>>("GetAllWorkplaces") ?? new();
+        }
+        catch
+        {
+            _workplaces = new();
+        }
+    }
+
+    private async Task LoadDepartments()
+    {
+        try
+        {
+            _departments = await Http.GetFromJsonAsync<List<UserDepartmentDto>>($"GetDepartmentsForUser?userId={_userId}") ?? new();
+        }
+        catch
+        {
+            _departments = new();
+        }
+    }
+
+    private async Task LoadShift()
+    {
+        _error = "";
+
+        try
+        {
+            var shifts = await Http.GetFromJsonAsync<List<ShiftDto>>($"GetAllShiftsFromUser?userId={_userId}");
+            var shift = shifts?.FirstOrDefault(s => s.ShiftId == ShiftId);
+
+            if (shift is null)
+            {
+                _error = "Shift niet gevonden.";
+                return;
+            }
+
+            _model = new ShiftFormModel
+            {
+                ShiftId = shift.ShiftId,
+                Functie = shift.Functie ?? "",
+                PauzeInMinuten = shift.PauzeInMinuten,
+                Opmerking = shift.Opmerking ?? "",
+                WerkplekId = shift.WerkplekId,
+                GebruikerAfdelingId = shift.GebruikerAfdelingId,
+                StartDateTimeLocalText = ToLocalInputValue(shift.StartDateTime),
+                EindDateTimeLocalText = ToLocalInputValue(shift.EindDateTime)
+            };
+        }
+        catch
+        {
+            _error = "Shift kon niet geladen worden.";
+        }
+    }
+
+    private void OnWorkplaceChanged(ChangeEventArgs e)
+    {
+        var newValue = e.Value?.ToString();
+
+        if (!int.TryParse(newValue, out var workplaceId))
+        {
+            workplaceId = 0;
+        }
+
+        if (_model.WerkplekId != workplaceId)
+        {
+            _model.WerkplekId = workplaceId;
+            _model.GebruikerAfdelingId = 0;
+        }
+    }
+
+    private void OnStartChanged(ChangeEventArgs e)
+    {
+        _model.StartDateTimeLocalText = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnEndChanged(ChangeEventArgs e)
+    {
+        _model.EindDateTimeLocalText = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task SaveShift()
+    {
+        _message = "";
+        _error = "";
+
+        if (string.IsNullOrWhiteSpace(_model.Functie))
+        {
+            _error = "Functie mag niet leeg zijn.";
+            return;
+        }
+
+        if (_useNewWorkplace)
+        {
+            var createdWorkplace = await CreateWorkplace();
+            if (createdWorkplace is null)
+                return;
+
+            _model.WerkplekId = createdWorkplace.WerkplekId;
+            _useNewWorkplace = false;
+            await LoadWorkplaces();
+        }
+
+        if (_model.WerkplekId <= 0)
+        {
+            _error = "Kies een werkplek.";
+            return;
+        }
+
+        if (!DateTime.TryParse(_model.StartDateTimeLocalText, out var startDateTime))
+        {
+            _error = "Kies een geldige startdatum en tijd.";
+            return;
+        }
+
+        if (!DateTime.TryParse(_model.EindDateTimeLocalText, out var endDateTime))
+        {
+            _error = "Kies een geldige einddatum en tijd.";
+            return;
+        }
+
+        if (endDateTime <= startDateTime)
+        {
+            _error = "De eindtijd moet later zijn dan de starttijd.";
+            return;
+        }
+
+        var gebruikerAfdelingId = _model.GebruikerAfdelingId;
+
+        if (_useNewDepartment)
+        {
+            if (string.IsNullOrWhiteSpace(_newDepartmentName))
+            {
+                _error = "Typ een naam voor de nieuwe afdeling.";
+                return;
+            }
+
+            var createdDepartment = await CreateDepartmentForUser();
+            if (createdDepartment is null)
+                return;
+
+            gebruikerAfdelingId = createdDepartment.GebruikerAfdelingId;
+            _model.GebruikerAfdelingId = gebruikerAfdelingId;
+            _newDepartmentName = string.Empty;
+            _useNewDepartment = false;
+            await LoadDepartments();
+        }
+        else if (gebruikerAfdelingId <= 0)
+        {
+            _error = "Kies een afdeling.";
+            return;
+        }
+
+        try
+        {
+            HttpResponseMessage response;
+
+            if (_isEditMode)
+            {
+                var updatePayload = new
+                {
+                    startDateTime = startDateTime,
+                    endDateTime = endDateTime,
+                    function = _model.Functie,
+                    pause = _model.PauzeInMinuten,
+                    description = _model.Opmerking,
+                    department = gebruikerAfdelingId
+                };
+
+                response = await Http.PutAsJsonAsync($"UpdateShift?id={_model.ShiftId}", updatePayload);
+            }
+            else
+            {
+                var url =
+                    $"AddShift?start={Uri.EscapeDataString(startDateTime.ToString("O"))}" +
+                    $"&end={Uri.EscapeDataString(endDateTime.ToString("O"))}" +
+                    $"&function={Uri.EscapeDataString(_model.Functie)}" +
+                    $"&pause={_model.PauzeInMinuten}" +
+                    $"&fkDepartment={gebruikerAfdelingId}" +
+                    $"&description={Uri.EscapeDataString(_model.Opmerking ?? string.Empty)}";
+
+                response = await Http.PostAsync(url, null);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/shifts");
+            }
+            else
+            {
+                _error = _isEditMode
+                    ? "Shift updaten is mislukt."
+                    : "Shift toevoegen is mislukt.";
+            }
+        }
+        catch
+        {
+            _error = "Er ging iets mis bij het opslaan van de shift.";
+        }
+    }
+
+    private async Task<CreateDepartmentResponse?> CreateDepartmentForUser()
+    {
+        try
+        {
+            var payload = new
+            {
+                userId = _userId,
+                werkplekId = _model.WerkplekId,
+                afdelingNaam = _newDepartmentName.Trim()
+            };
+
+            var response = await Http.PostAsJsonAsync("CreateDepartmentForUser", payload);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = "Nieuwe afdeling aanmaken is mislukt.";
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<CreateDepartmentResponse>();
+        }
+        catch
+        {
+            _error = "Er ging iets mis bij het aanmaken van de afdeling.";
+            return null;
+        }
+    }
+
+    private async Task<CreateWorkplaceResponse?> CreateWorkplace()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_newWorkplace.Naam) ||
+                string.IsNullOrWhiteSpace(_newWorkplace.Postcode) ||
+                string.IsNullOrWhiteSpace(_newWorkplace.Gemeente) ||
+                string.IsNullOrWhiteSpace(_newWorkplace.StraatNr))
+            {
+                _error = "Vul alle velden van de nieuwe werkplek in.";
+                return null;
+            }
+
+            var response = await Http.PostAsJsonAsync("CreateWorkplace", _newWorkplace);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = "Nieuwe werkplek aanmaken is mislukt.";
+                return null;
+            }
+
+            var created = await response.Content.ReadFromJsonAsync<CreateWorkplaceResponse>();
+            _newWorkplace = new();
+            return created;
+        }
+        catch
+        {
+            _error = "Er ging iets mis bij het aanmaken van de werkplek.";
+            return null;
+        }
+    }
+
+    private static string ToLocalInputValue(DateTime value)
+    {
+        return value.ToString("yyyy-MM-ddTHH:mm");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/shifts");
+    }
+
+    private class ShiftDto
+    {
+        public int ShiftId { get; set; }
+        public DateTime StartDateTime { get; set; }
+        public DateTime EindDateTime { get; set; }
+        public int PauzeInMinuten { get; set; }
+        public string Functie { get; set; } = "";
+        public string Opmerking { get; set; } = "";
+        public int AfdelingId { get; set; }
+        public int GebruikerAfdelingId { get; set; }
+        public string AfdelingNaam { get; set; } = "";
+        public int WerkplekId { get; set; }
+        public string WerkplekNaam { get; set; } = "";
+    }
+
+    private class UserDepartmentDto
+    {
+        public int GebruikerAfdelingId { get; set; }
+        public int AfdelingId { get; set; }
+        public string AfdelingNaam { get; set; } = "";
+        public decimal Uurloon { get; set; }
+        public int WerkplekId { get; set; }
+        public string WerkplekNaam { get; set; } = "";
+    }
+
+    private class WorkplaceDto
+    {
+        public int WerkplekId { get; set; }
+        public string WerkplekNaam { get; set; } = "";
+        public string Gemeente { get; set; } = "";
+        public string Postcode { get; set; } = "";
+        public string StraatNr { get; set; } = "";
+    }
+
+    private class CreateDepartmentResponse
+    {
+        public int GebruikerAfdelingId { get; set; }
+        public int AfdelingId { get; set; }
+        public string AfdelingNaam { get; set; } = "";
+        public decimal Uurloon { get; set; }
+        public int WerkplekId { get; set; }
+    }
+
+    private class CreateWorkplaceResponse
+    {
+        public int WerkplekId { get; set; }
+        public string WerkplekNaam { get; set; } = "";
+        public string Postcode { get; set; } = "";
+        public string Gemeente { get; set; } = "";
+        public string StraatNr { get; set; } = "";
+    }
+
+    private class ShiftFormModel
+    {
+        public int ShiftId { get; set; }
+        public string Functie { get; set; } = string.Empty;
+        public int PauzeInMinuten { get; set; }
+        public string StartDateTimeLocalText { get; set; } = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
+        public string EindDateTimeLocalText { get; set; } = DateTime.Now.AddHours(1).ToString("yyyy-MM-ddTHH:mm");
+        public int WerkplekId { get; set; }
+        public int GebruikerAfdelingId { get; set; }
+        public string Opmerking { get; set; } = string.Empty;
+    }
+
+    private class NewWorkplaceModel
+    {
+        public string Naam { get; set; } = string.Empty;
+        public string Postcode { get; set; } = string.Empty;
+        public string Gemeente { get; set; } = string.Empty;
+        public string StraatNr { get; set; } = string.Empty;
+    }
+}

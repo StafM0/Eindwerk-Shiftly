@@ -1,0 +1,272 @@
+@page "/shifts"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedSessionStorage SessionStorage
+@inject IJSRuntime JS
+
+<PageTitle>Shiftly – Shifts</PageTitle>
+
+@if (!_sessionChecked)
+{
+}
+else if (!_isLoggedIn)
+{
+}
+else if (_isLoading)
+{
+    <div class="dash-root">
+        <p class="loading-text">Laden…</p>
+    </div>
+}
+else
+{
+    <div class="dash-root">
+        <header class="topbar">
+            <div class="brand">
+                <img src="/ShiftlyLogo.png" class="brand-logo" alt="Shiftly" />
+            </div>
+
+            <nav class="nav-pill">
+                <a class="nav-item" href="/dashboard">Dashboard</a>
+                <a class="nav-item is-active" href="/shifts">Shifts</a>
+                <a class="nav-item" href="/wishlist">Wishlist</a>
+                <a class="nav-item" href="/abonnementen">Abonnementen</a>
+            </nav>
+
+            <div class="top-actions">
+                <a class="btn-ghost" href="/user">@_fullName</a>
+            </div>
+        </header>
+
+        <main class="shifts-page">
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Alle shifts</h2>
+                        <p class="card-sub">Hier zie je al je shifts. Je kan voorbije shifts ook tonen of verbergen.</p>
+                    </div>
+
+                    <div class="header-actions">
+                        <button type="button" class="btn-secondary-sm" @onclick="TogglePastShifts">
+                            @(_showPastShifts ? "Verberg voorbije shifts" : "Toon voorbije shifts")
+                        </button>
+
+                        <a class="btn-primary-sm" href="/shift-form">+ Add</a>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <div class="message error">@_error</div>
+                }
+
+                <div class="item-list">
+                    @if (FilteredShifts.Count == 0)
+                    {
+                        <div class="item-row">
+                            <div class="item-meta">Geen shifts gevonden.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var shift in FilteredShifts)
+                        {
+                            <div class="item-row">
+                                <div class="item-left">
+                                    <div class="item-title">@shift.Functie</div>
+                                    <div class="item-meta">
+                                        @shift.StartDateTime.ToString("ddd dd MMM yyyy HH:mm") – @shift.EindDateTime.ToString("HH:mm")
+                                    </div>
+                                    <div class="item-note">Werkplek: @shift.WerkplekNaam</div>
+                                    <div class="item-note">Uurloon: € @shift.Uurloon.ToString("0.00")</div>
+
+                                    @if (shift.PauzeInMinuten > 0)
+                                    {
+                                        <div class="item-note">Pauze: @shift.PauzeInMinuten min</div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(shift.Opmerking))
+                                    {
+                                        <div class="item-note">@shift.Opmerking</div>
+                                    }
+                                </div>
+
+                                <div class="item-right">
+                                    <span class="badge @ShiftBadgeClass(shift)">
+                                        @ShiftLabel(shift)
+                                    </span>
+
+                                    <button type="button" class="btn-secondary-sm" @onclick="() => EditShift(shift.ShiftId)">
+                                        Edit
+                                    </button>
+                                    <button type="button" class="btn-secondary-sm btn-danger-sm" @onclick="() => DeleteShift(shift.ShiftId)">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+        </main>
+    </div>
+}
+
+@code {
+    bool _sessionChecked = false;
+    bool _isLoggedIn = false;
+    bool _isLoading = true;
+    bool _showPastShifts = false;
+
+    int _userId;
+    string _fullName = "";
+    string _error = "";
+
+    List<ShiftDto> _shifts = new();
+
+    List<ShiftDto> FilteredShifts =>
+        (_showPastShifts
+            ? _shifts
+            : _shifts.Where(s => s.EindDateTime >= DateTime.Now).ToList())
+        .OrderBy(s => s.StartDateTime)
+        .ToList();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            var idResult = await SessionStorage.GetAsync<int>("userId");
+            var nameResult = await SessionStorage.GetAsync<string>("userFullName");
+
+            if (idResult.Success && idResult.Value > 0)
+            {
+                _userId = idResult.Value;
+                _fullName = nameResult.Success ? nameResult.Value ?? "" : "";
+                _isLoggedIn = true;
+                _sessionChecked = true;
+                await LoadShifts();
+            }
+            else
+            {
+                _isLoggedIn = false;
+                _sessionChecked = true;
+                StateHasChanged();
+                Navigation.NavigateTo("/", forceLoad: false);
+            }
+        }
+        catch
+        {
+            _isLoggedIn = false;
+            _sessionChecked = true;
+            Navigation.NavigateTo("/", forceLoad: false);
+        }
+    }
+
+    async Task LoadShifts()
+    {
+        _isLoading = true;
+        _error = "";
+        StateHasChanged();
+
+        try
+        {
+            var result = await Http.GetFromJsonAsync<List<ShiftDto>>($"GetAllShiftsFromUser?userId={_userId}");
+            _shifts = result ?? new();
+        }
+        catch
+        {
+            _error = "Shifts konden niet geladen worden.";
+        }
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    void TogglePastShifts()
+    {
+        _showPastShifts = !_showPastShifts;
+    }
+
+    void EditShift(int shiftId)
+    {
+        Navigation.NavigateTo($"/shift-form/{shiftId}");
+    }
+
+    async Task DeleteShift(int shiftId)
+    {
+        _error = "";
+
+        try
+        {
+            var confirmed = await JS.InvokeAsync<bool>("confirm", "Wil je deze shift verwijderen?");
+            if (!confirmed)
+                return;
+
+            var response = await Http.DeleteAsync($"DeleteShift?shiftId={shiftId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadShifts();
+            }
+            else
+            {
+                _error = "Shift verwijderen is mislukt.";
+            }
+        }
+        catch
+        {
+            _error = "Shift verwijderen is mislukt.";
+        }
+    }
+
+    static string ShiftLabel(ShiftDto shift)
+    {
+        var now = DateTime.Now;
+
+        if (shift.EindDateTime < now)
+            return "Voorbij";
+
+        if (shift.StartDateTime.Date == now.Date)
+            return "Vandaag";
+
+        if (shift.StartDateTime.Date == now.Date.AddDays(1))
+            return "Morgen";
+
+        if (shift.StartDateTime <= now.AddDays(7))
+            return "Deze week";
+
+        return "Later";
+    }
+
+    static string ShiftBadgeClass(ShiftDto shift)
+    {
+        var now = DateTime.Now;
+
+        if (shift.EindDateTime < now)
+            return "badge-past";
+
+        if (shift.StartDateTime.Date == now.Date)
+            return "badge-today";
+
+        if (shift.StartDateTime <= now.AddDays(7))
+            return "badge-week";
+
+        return "badge-later";
+    }
+
+    class ShiftDto
+    {
+        public int ShiftId { get; set; }
+        public DateTime StartDateTime { get; set; }
+        public DateTime EindDateTime { get; set; }
+        public int PauzeInMinuten { get; set; }
+        public string Functie { get; set; } = "";
+        public string Opmerking { get; set; } = "";
+        public decimal Uurloon { get; set; }
+        public sbyte? Betaaldag { get; set; }
+        public int AfdelingId { get; set; }
+        public string WerkplekNaam { get; set; } = "";
+    }
+}

@@ -1,0 +1,571 @@
+@page "/abonnementen"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedSessionStorage SessionStorage
+
+<PageTitle>Shiftly – Abonnementen</PageTitle>
+
+@if (!_sessionChecked)
+{
+}
+else if (!_isLoggedIn)
+{
+}
+else if (_isLoading)
+{
+    <div class="subscriptions-shell">
+        <div class="page-state">Laden…</div>
+    </div>
+}
+else
+{
+    <div class="subscriptions-shell">
+        <header class="topbar">
+            <div class="brand">
+                <img src="/ShiftlyLogo.png" class="brand-logo" alt="Shiftly" />
+            </div>
+
+            <nav class="nav-pill">
+                <a class="nav-item" href="/dashboard">Dashboard</a>
+                <a class="nav-item" href="/shifts">Shifts</a>
+                <a class="nav-item" href="/wishlist">Wishlist</a>
+                <a class="nav-item is-active" href="/abonnementen">Abonnementen</a>
+            </nav>
+
+            <div class="top-actions">
+                <a class="user-chip" href="/user">@_userDisplayName</a>
+            </div>
+        </header>
+
+        <div class="subscriptions-overview">
+            <section class="overview-card">
+                <div class="overview-label">Actieve abonnementen</div>
+                <div class="overview-value">@_subscriptions.Count(x => x.IsActief)</div>
+            </section>
+
+            <section class="overview-card">
+                <div class="overview-label">Totaal per maand</div>
+                <div class="overview-value">€ @ActiveMonthlyTotal.ToString("0.00")</div>
+            </section>
+
+            <section class="overview-card">
+                <div class="overview-label">Nog te betalen</div>
+                <div class="overview-value">@_subscriptions.Count(x => !x.Betaald && x.IsActief)</div>
+            </section>
+        </div>
+
+        <div class="subscriptions-page">
+            <section class="card form-card">
+                <div class="card-header">
+                    <h2 class="card-title">@(_isEditMode ? "Abonnement bewerken" : "Abonnement toevoegen")</h2>
+                    <p class="card-sub">Kies een bestaand abonnement of maak zelf een nieuwe aan.</p>
+                </div>
+
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(_success))
+                    {
+                        <div class="message success">@_success</div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_error))
+                    {
+                        <div class="message error">@_error</div>
+                    }
+
+                    <EditForm Model="_model" OnValidSubmit="SaveSubscription">
+                        <div class="form-grid">
+                            <div class="toggle-row full-width">
+                                <label class="toggle-label">
+                                    <input type="checkbox" @bind="_useCustomSubscription" />
+                                    Zelf nieuw abonnement typen
+                                </label>
+                            </div>
+
+                            @if (!_useCustomSubscription)
+                            {
+                                <div class="field full-width">
+                                    <label for="existingSubscription">Bestaand abonnement</label>
+                                    <select id="existingSubscription"
+                                            class="form-input"
+                                            value="@_selectedSubscriptionId"
+                                            @onchange="OnSubscriptionChanged">
+                                        <option value="0">Kies een abonnement</option>
+                                        @foreach (var item in _catalogSubscriptions)
+                                        {
+                                            <option value="@item.AbonnementId">@item.Naam</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="field full-width">
+                                    <label for="name">Naam abonnement</label>
+                                    <input id="name"
+                                           type="text"
+                                           class="form-input"
+                                           @bind="_model.Naam" />
+                                </div>
+                            }
+
+                            <div class="field full-width">
+                                <label for="description">Omschrijving</label>
+                                <textarea id="description"
+                                          class="form-input textarea"
+                                          @bind="_model.Omschrijving"></textarea>
+                            </div>
+
+                            <div class="form-row-3 full-width">
+                                <div class="field">
+                                    <label for="price">Prijs (€)</label>
+                                    <input id="price"
+                                           type="number"
+                                           step="0.01"
+                                           class="form-input"
+                                           @bind="_model.Prijs" />
+                                </div>
+
+                                <div class="field">
+                                    <label for="startDate">Periode start</label>
+                                    <input id="startDate"
+                                           type="date"
+                                           class="form-input"
+                                           value="@_startDateString"
+                                           @onchange="OnStartDateChanged" />
+                                </div>
+
+                                <div class="field">
+                                    <label for="endDate">Periode einde</label>
+                                    <input id="endDate"
+                                           type="date"
+                                           class="form-input"
+                                           value="@_endDateString"
+                                           @onchange="OnEndDateChanged" />
+                                </div>
+                            </div>
+
+                            <div class="form-row-2 full-width">
+                                <label class="toggle-label">
+                                    <input type="checkbox" @bind="_model.Betaald" />
+                                    Reeds betaald
+                                </label>
+
+                                <label class="toggle-label">
+                                    <input type="checkbox" @bind="_model.IsActief" />
+                                    Abonnement actief
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            @if (_isEditMode)
+                            {
+                                <button type="button" class="btn" @onclick="CancelEdit">Annuleren</button>
+                            }
+
+                            <button type="submit" class="btn btn-primary">
+                                @(_isEditMode ? "Opslaan" : "Toevoegen")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </section>
+
+            <section class="card list-card">
+                <div class="card-header">
+                    <h2 class="card-title">Jouw abonnementen</h2>
+                    <p class="card-sub">Overzicht van al je abonnementen met betaalstatus.</p>
+                </div>
+
+                <div class="card-body">
+                    @if (_subscriptions.Count == 0)
+                    {
+                        <div class="empty-state">Nog geen abonnementen toegevoegd.</div>
+                    }
+                    else
+                    {
+                        <div class="subscription-list">
+                            @foreach (var subscription in _subscriptions.OrderByDescending(x => x.IsActief).ThenBy(x => x.Naam))
+                            {
+                                <article class="subscription-item">
+                                    <div class="subscription-top">
+                                        <div class="subscription-title-wrap">
+                                            <h3 class="subscription-title">@subscription.Naam</h3>
+                                            @if (!string.IsNullOrWhiteSpace(subscription.Beschrijving))
+                                            {
+                                                <p class="subscription-subtitle">@subscription.Beschrijving</p>
+                                            }
+                                        </div>
+
+                                        <div class="subscription-price">
+                                            € @subscription.Prijs.ToString("0.00")
+                                        </div>
+                                    </div>
+
+                                    <div class="subscription-meta">
+                                        <span class="subscription-badge">Van @subscription.PeriodeStartString</span>
+                                        <span class="subscription-badge">Tot @subscription.PeriodeEindeString</span>
+
+                                        @if (subscription.Betaald)
+                                        {
+                                            <span class="subscription-badge paid">Betaald</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="subscription-badge unpaid">Open</span>
+                                        }
+
+                                        @if (subscription.IsActief)
+                                        {
+                                            <span class="subscription-badge">Actief</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="subscription-badge">Inactief</span>
+                                        }
+                                    </div>
+
+                                    <div class="subscription-actions">
+                                        <button type="button" class="btn" @onclick="@(async () => await TogglePaid(subscription))">
+                                            @(subscription.Betaald ? "Zet open" : "Zet betaald")
+                                        </button>
+
+                                        <button type="button" class="btn" @onclick="@(() => StartEdit(subscription))">
+                                            Edit
+                                        </button>
+
+                                        <button type="button" class="btn btn-danger" @onclick="@(async () => await DeleteSubscription(subscription))">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _sessionChecked;
+    private bool _isLoggedIn;
+    private bool _isLoading = true;
+    private bool _isEditMode;
+    private bool _useCustomSubscription;
+    private int _userId;
+    private int _selectedSubscriptionId;
+    private int? _originalAbonnementId;
+    private string? _originalPeriodeStart;
+    private string _userDisplayName = "Gebruiker";
+    private string _success = string.Empty;
+    private string _error = string.Empty;
+
+    private string _startDateString = DateTime.Today.ToString("yyyy-MM-dd");
+    private string _endDateString = DateTime.Today.AddMonths(1).ToString("yyyy-MM-dd");
+
+    private SubscriptionFormModel _model = new()
+    {
+        Prijs = 0,
+        Betaald = false,
+        IsActief = true
+    };
+
+    private List<UserSubscriptionDto> _subscriptions = new();
+    private List<CatalogSubscriptionDto> _catalogSubscriptions = new();
+
+    private decimal ActiveMonthlyTotal => _subscriptions
+        .Where(x => x.IsActief)
+        .Sum(x => x.Prijs);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        var userIdResult = await SessionStorage.GetAsync<int>("userId");
+        var userNameResult = await SessionStorage.GetAsync<string>("userName");
+
+        _sessionChecked = true;
+
+        if (!userIdResult.Success || userIdResult.Value <= 0)
+        {
+            _isLoggedIn = false;
+            _isLoading = false;
+            Navigation.NavigateTo("/");
+            StateHasChanged();
+            return;
+        }
+
+        _userId = userIdResult.Value;
+        _userDisplayName = string.IsNullOrWhiteSpace(userNameResult.Value) ? "Gebruiker" : userNameResult.Value;
+        _isLoggedIn = true;
+
+        await LoadCatalogSubscriptions();
+        await LoadUserSubscriptions();
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadCatalogSubscriptions()
+    {
+        try
+        {
+            _catalogSubscriptions = await Http.GetFromJsonAsync<List<CatalogSubscriptionDto>>("GetSubscriptionCatalog") ?? new();
+        }
+        catch
+        {
+            _catalogSubscriptions = new();
+        }
+    }
+
+    private async Task LoadUserSubscriptions()
+    {
+        try
+        {
+            _subscriptions = await Http.GetFromJsonAsync<List<UserSubscriptionDto>>($"GetAllSubscriptionsFromUser?userId={_userId}") ?? new();
+        }
+        catch
+        {
+            _subscriptions = new();
+        }
+    }
+
+    private void OnSubscriptionChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var parsed))
+            _selectedSubscriptionId = parsed;
+        else
+            _selectedSubscriptionId = 0;
+    }
+
+    private void OnStartDateChanged(ChangeEventArgs e)
+    {
+        _startDateString = e.Value?.ToString() ?? DateTime.Today.ToString("yyyy-MM-dd");
+    }
+
+    private void OnEndDateChanged(ChangeEventArgs e)
+    {
+        _endDateString = e.Value?.ToString() ?? DateTime.Today.AddMonths(1).ToString("yyyy-MM-dd");
+    }
+
+    private async Task SaveSubscription()
+    {
+        _success = string.Empty;
+        _error = string.Empty;
+
+        try
+        {
+            if (!_useCustomSubscription && _selectedSubscriptionId <= 0)
+            {
+                _error = "Kies een bestaand abonnement of typ zelf een nieuwe naam.";
+                return;
+            }
+
+            if (_useCustomSubscription && string.IsNullOrWhiteSpace(_model.Naam))
+            {
+                _error = "Geef een naam voor het abonnement.";
+                return;
+            }
+
+            if (DateTime.Parse(_endDateString) < DateTime.Parse(_startDateString))
+            {
+                _error = "De einddatum mag niet voor de startdatum liggen.";
+                return;
+            }
+
+            var request = new SaveUserSubscriptionRequestDto
+            {
+                UserId = _userId,
+                IsEditMode = _isEditMode,
+                OriginalAbonnementId = _originalAbonnementId,
+                OriginalPeriodeStart = _originalPeriodeStart,
+                ExistingAbonnementId = _useCustomSubscription ? 0 : _selectedSubscriptionId,
+                Naam = _useCustomSubscription ? _model.Naam : null,
+                Omschrijving = _model.Omschrijving,
+                Prijs = _model.Prijs,
+                IsActief = _model.IsActief,
+                Betaald = _model.Betaald,
+                PeriodeStart = _startDateString,
+                PeriodeEinde = _endDateString
+            };
+
+            var response = await Http.PostAsJsonAsync("SaveUserSubscription", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = "Kon het abonnement niet opslaan.";
+                return;
+            }
+
+            _success = _isEditMode ? "Abonnement aangepast." : "Abonnement toegevoegd.";
+
+            await LoadCatalogSubscriptions();
+            await LoadUserSubscriptions();
+            ResetForm();
+        }
+        catch
+        {
+            _error = "Er ging iets mis bij het opslaan.";
+        }
+    }
+
+    private void StartEdit(UserSubscriptionDto subscription)
+    {
+        _isEditMode = true;
+        _useCustomSubscription = true;
+
+        _originalAbonnementId = subscription.AbonnementId;
+        _originalPeriodeStart = subscription.PeriodeStartRaw;
+
+        _selectedSubscriptionId = 0;
+
+        _model = new SubscriptionFormModel
+        {
+            Naam = subscription.Naam,
+            Omschrijving = subscription.Beschrijving,
+            Prijs = subscription.Prijs,
+            Betaald = subscription.Betaald,
+            IsActief = subscription.IsActief
+        };
+
+        _startDateString = subscription.PeriodeStartRaw;
+        _endDateString = subscription.PeriodeEindeRaw;
+
+        _success = string.Empty;
+        _error = string.Empty;
+    }
+
+    private async Task TogglePaid(UserSubscriptionDto subscription)
+    {
+        try
+        {
+            var newStatus = !subscription.Betaald;
+            var url =
+                $"SetUserSubscriptionPaidStatus?userId={_userId}" +
+                $"&abonnementId={subscription.AbonnementId}" +
+                $"&periodeStart={Uri.EscapeDataString(subscription.PeriodeStartRaw)}" +
+                $"&betaald={newStatus}";
+
+            var response = await Http.PutAsJsonAsync(url, new { });
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadUserSubscriptions();
+            }
+        }
+        catch
+        {
+            _error = "Kon de betaalstatus niet aanpassen.";
+        }
+    }
+
+    private async Task DeleteSubscription(UserSubscriptionDto subscription)
+    {
+        try
+        {
+            var url =
+                $"DeleteUserSubscription?userId={_userId}" +
+                $"&abonnementId={subscription.AbonnementId}" +
+                $"&periodeStart={Uri.EscapeDataString(subscription.PeriodeStartRaw)}";
+
+            var response = await Http.DeleteAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadUserSubscriptions();
+
+                if (_isEditMode &&
+                    _originalAbonnementId == subscription.AbonnementId &&
+                    _originalPeriodeStart == subscription.PeriodeStartRaw)
+                {
+                    ResetForm();
+                }
+            }
+        }
+        catch
+        {
+            _error = "Kon het abonnement niet verwijderen.";
+        }
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        _isEditMode = false;
+        _useCustomSubscription = false;
+        _selectedSubscriptionId = 0;
+        _originalAbonnementId = null;
+        _originalPeriodeStart = null;
+        _success = string.Empty;
+        _error = string.Empty;
+
+        _model = new SubscriptionFormModel
+        {
+            Prijs = 0,
+            Betaald = false,
+            IsActief = true
+        };
+
+        _startDateString = DateTime.Today.ToString("yyyy-MM-dd");
+        _endDateString = DateTime.Today.AddMonths(1).ToString("yyyy-MM-dd");
+    }
+
+    private class SubscriptionFormModel
+    {
+        public string Naam { get; set; } = string.Empty;
+        public string Omschrijving { get; set; } = string.Empty;
+        public decimal Prijs { get; set; }
+        public bool Betaald { get; set; }
+        public bool IsActief { get; set; } = true;
+    }
+
+    private class CatalogSubscriptionDto
+    {
+        public int AbonnementId { get; set; }
+        public string Naam { get; set; } = string.Empty;
+        public string Omschrijving { get; set; } = string.Empty;
+        public decimal Prijs { get; set; }
+        public bool IsActief { get; set; }
+    }
+
+    private class UserSubscriptionDto
+    {
+        public int AbonnementId { get; set; }
+        public string Naam { get; set; } = string.Empty;
+        public string Beschrijving { get; set; } = string.Empty;
+        public decimal Prijs { get; set; }
+        public DateOnly PeriodeStart { get; set; }
+        public DateOnly PeriodeEinde { get; set; }
+        public bool Betaald { get; set; }
+        public bool IsActief { get; set; } = true;
+
+        public string PeriodeStartString => PeriodeStart.ToString("dd/MM/yyyy");
+        public string PeriodeEindeString => PeriodeEinde.ToString("dd/MM/yyyy");
+        public string PeriodeStartRaw => PeriodeStart.ToString("yyyy-MM-dd");
+        public string PeriodeEindeRaw => PeriodeEinde.ToString("yyyy-MM-dd");
+    }
+
+    private class SaveUserSubscriptionRequestDto
+    {
+        public int UserId { get; set; }
+        public bool IsEditMode { get; set; }
+        public int? OriginalAbonnementId { get; set; }
+        public string? OriginalPeriodeStart { get; set; }
+        public int ExistingAbonnementId { get; set; }
+        public string? Naam { get; set; }
+        public string? Omschrijving { get; set; }
+        public decimal Prijs { get; set; }
+        public bool IsActief { get; set; }
+        public bool Betaald { get; set; }
+        public string PeriodeStart { get; set; } = string.Empty;
+        public string PeriodeEinde { get; set; } = string.Empty;
+    }
+}

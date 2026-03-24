@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Shiftly.Models;
-using System.Reflection.PortableExecutable;
 using System.Text.Json;
-using System.Xml.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString =
@@ -11,14 +9,11 @@ builder.Services.AddDbContext<ShiftlyDbContext>(options =>
 options.UseMySql(connectionString,
 ServerVersion.AutoDetect(connectionString)));
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -28,7 +23,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 #region Users
-// GET: All Users
 app.MapGet("/GetAllUsers", async (ShiftlyDbContext db) =>
 {
     var gebruikers = await db.Gebruikers.Select(pbl => new
@@ -46,7 +40,6 @@ app.MapGet("/GetAllUsers", async (ShiftlyDbContext db) =>
     return Results.Ok(gebruikers);
 }).WithTags("Users");
 
-// GET: User By Id
 app.MapGet("/GetUserById", async (int id, ShiftlyDbContext db) =>
 {
     var user = await db.Gebruikers
@@ -66,8 +59,6 @@ app.MapGet("/GetUserById", async (int id, ShiftlyDbContext db) =>
     return Results.Ok(user);
 }).WithTags("Users");
 
-
-// PUT: Edit User
 app.MapPut("/UpdateUser", async (int id, JsonElement updates, ShiftlyDbContext db) =>
 {
     var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == id);
@@ -91,7 +82,6 @@ app.MapPut("/UpdateUser", async (int id, JsonElement updates, ShiftlyDbContext d
     return Results.Ok(user);
 }).WithTags("Users");
 
-// PUT: Change Password
 app.MapPut("/ChangePassword", async (int userId, string currentPassword, string newPassword, ShiftlyDbContext db) =>
 {
     var user = await db.Gebruikers.FirstOrDefaultAsync(pbl => pbl.IdGebruiker == userId);
@@ -113,7 +103,6 @@ app.MapPut("/ChangePassword", async (int userId, string currentPassword, string 
     return Results.Ok(new { message = "Wachtwoord succesvol gewijzigd." });
 }).WithTags("Users");
 
-// POST: Add User
 app.MapPost("/AddUser", async (string email, string firstName, string name, string password, bool isStudent, ShiftlyDbContext db) =>
 {
     var exists = await db.Gebruikers.AnyAsync(pbl => pbl.EmailGebruiker == email);
@@ -138,7 +127,6 @@ app.MapPost("/AddUser", async (string email, string firstName, string name, stri
     return Results.Created($"user", user);
 }).WithTags("Users");
 
-// DELETE: User
 app.MapDelete("/DeleteUser", async (int userId, ShiftlyDbContext db) =>
 {
     var user = await db.Gebruikers
@@ -152,11 +140,9 @@ app.MapDelete("/DeleteUser", async (int userId, ShiftlyDbContext db) =>
 
     return Results.NoContent();
 }).WithTags("Users");
-
 #endregion
 
 #region Shifts
-// GET: All Shifts
 app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
 {
     var shifts = await db.Shifts.Select(pbl => new
@@ -171,7 +157,6 @@ app.MapGet("/GetAllShifts", async (ShiftlyDbContext db) =>
     return Results.Ok(shifts);
 }).WithTags("Shifts");
 
-// PUT: Edit Shift
 app.MapPut("/UpdateShift", async (int id, JsonElement updates, ShiftlyDbContext db) =>
 {
     var shift = await db.Shifts.FirstOrDefaultAsync(pbl => pbl.IdShift == id);
@@ -185,7 +170,7 @@ app.MapPut("/UpdateShift", async (int id, JsonElement updates, ShiftlyDbContext 
         shift.EindDateTime = endDateTime.GetDateTime();
 
     if (updates.TryGetProperty("function", out var function))
-        shift.Functie = function.GetString();
+        shift.Functie = function.GetString() ?? string.Empty;
 
     if (updates.TryGetProperty("pause", out var pause))
         shift.PauzeInMinuten = pause.GetInt32();
@@ -200,10 +185,9 @@ app.MapPut("/UpdateShift", async (int id, JsonElement updates, ShiftlyDbContext 
     return Results.Ok(shift);
 }).WithTags("Shifts");
 
-// POST: Add Shift
 app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, int pause, int fkDepartment, string description, ShiftlyDbContext db) =>
 {
-    var exists = await db.Shifts.AnyAsync(pbl => pbl.StartDateTime == start);
+    var exists = await db.Shifts.AnyAsync(pbl => pbl.StartDateTime == start && pbl.FkGebruikerAfdeling == fkDepartment);
 
     if (exists)
         return Results.Conflict("Shift already in Database");
@@ -224,7 +208,6 @@ app.MapPost("/AddShift", async (DateTime start, DateTime end, string function, i
     return Results.Created($"subscription", shift);
 }).WithTags("Shifts");
 
-// DELETE: Shift
 app.MapDelete("/DeleteShift", async (int shiftId, ShiftlyDbContext db) =>
 {
     var shift = await db.Shifts
@@ -241,21 +224,23 @@ app.MapDelete("/DeleteShift", async (int shiftId, ShiftlyDbContext db) =>
 #endregion
 
 #region Subscriptions
-// GET: All Subscriptions
 app.MapGet("/GetAllSubscriptions", async (ShiftlyDbContext db) =>
 {
-    var subscriptions = await db.Abonnements.Select(pbl => new
-    {
-        idAbonnement = pbl.IdAbonnement,
-        NaamAbonnement = pbl.NaamAbonnement,
-        OmschrijvingAbonnement = pbl.OmschrijvingAbonnement,
-        BedragAbonnement = pbl.BedragAbonnement,
-        IsActief = pbl.IsActief
-    }).ToListAsync();
+    var subscriptions = await db.Abonnements
+        .Select(pbl => new
+        {
+            idAbonnement = pbl.IdAbonnement,
+            NaamAbonnement = pbl.NaamAbonnement,
+            OmschrijvingAbonnement = pbl.OmschrijvingAbonnement,
+            BedragAbonnement = pbl.BedragAbonnement,
+            IsActief = pbl.IsActief
+        })
+        .OrderBy(pbl => pbl.NaamAbonnement)
+        .ToListAsync();
+
     return Results.Ok(subscriptions);
 }).WithTags("Subscriptions");
 
-// POST: Add Subscription
 app.MapPost("/AddSubscription", async (string name, string description, decimal Amount, bool actif, ShiftlyDbContext db) =>
 {
     var exists = await db.Abonnements.AnyAsync(pbl => pbl.NaamAbonnement == name);
@@ -274,10 +259,9 @@ app.MapPost("/AddSubscription", async (string name, string description, decimal 
     db.Abonnements.Add(subscription);
     await db.SaveChangesAsync();
 
-    return Results.Created($"subscription", subscription);
+    return Results.Created("subscription", subscription);
 }).WithTags("Subscriptions");
 
-// DELETE: Subscription
 app.MapDelete("/DeleteSubscription", async (int subscriptionId, ShiftlyDbContext db) =>
 {
     var subscription = await db.Abonnements
@@ -291,10 +275,218 @@ app.MapDelete("/DeleteSubscription", async (int subscriptionId, ShiftlyDbContext
 
     return Results.NoContent();
 }).WithTags("Subscriptions");
+
+app.MapGet("/GetSubscriptionCatalog", async (ShiftlyDbContext db) =>
+{
+    var subscriptions = await db.Abonnements
+        .Where(a => a.IsActief != false)
+        .OrderBy(a => a.NaamAbonnement)
+        .Select(a => new
+        {
+            AbonnementId = a.IdAbonnement,
+            Naam = a.NaamAbonnement,
+            Omschrijving = a.OmschrijvingAbonnement,
+            Prijs = a.BedragAbonnement,
+            IsActief = a.IsActief
+        })
+        .ToListAsync();
+
+    return Results.Ok(subscriptions);
+}).WithTags("Subscriptions");
+
+app.MapGet("/GetAllSubscriptionsFromUser", async (int userId, ShiftlyDbContext db) =>
+{
+    var subscriptions = await db.Gebruikerabonnements
+        .Where(ga => ga.FkGebruiker == userId)
+        .Include(ga => ga.FkAbonnementNavigation)
+        .OrderBy(ga => ga.PeriodeEinde)
+        .Select(ga => new
+        {
+            AbonnementId = ga.FkAbonnement,
+            Naam = ga.FkAbonnementNavigation.NaamAbonnement,
+            Beschrijving = ga.FkAbonnementNavigation.OmschrijvingAbonnement,
+            Prijs = ga.FkAbonnementNavigation.BedragAbonnement,
+            PeriodeStart = ga.PeriodeStart,
+            PeriodeEinde = ga.PeriodeEinde,
+            Betaald = ga.Betaald,
+            IsActief = ga.FkAbonnementNavigation.IsActief
+        })
+        .ToListAsync();
+
+    return Results.Ok(subscriptions);
+}).WithTags("Subscriptions");
+
+app.MapPost("/SaveUserSubscription", async (SaveUserSubscriptionRequest request, ShiftlyDbContext db) =>
+{
+    if (request.UserId <= 0)
+        return Results.BadRequest(new { message = "Gebruiker ontbreekt." });
+
+    if (!DateOnly.TryParse(request.PeriodeStart, out var periodeStart))
+        return Results.BadRequest(new { message = "Periode-start is ongeldig." });
+
+    if (!DateOnly.TryParse(request.PeriodeEinde, out var periodeEinde))
+        return Results.BadRequest(new { message = "Periode-einde is ongeldig." });
+
+    DateOnly? originalPeriodeStart = null;
+    if (!string.IsNullOrWhiteSpace(request.OriginalPeriodeStart))
+    {
+        if (!DateOnly.TryParse(request.OriginalPeriodeStart, out var parsedOriginalPeriodeStart))
+            return Results.BadRequest(new { message = "Originele startdatum is ongeldig." });
+
+        originalPeriodeStart = parsedOriginalPeriodeStart;
+    }
+
+    if (periodeEinde < periodeStart)
+        return Results.BadRequest(new { message = "Periode-einde moet na periode-start liggen." });
+
+    Abonnement? abonnement = null;
+
+    if (request.ExistingAbonnementId > 0)
+    {
+        abonnement = await db.Abonnements.FirstOrDefaultAsync(a => a.IdAbonnement == request.ExistingAbonnementId);
+
+        if (abonnement == null)
+            return Results.NotFound(new { message = "Abonnement niet gevonden." });
+
+        abonnement.BedragAbonnement = request.Prijs;
+        abonnement.OmschrijvingAbonnement = request.Omschrijving ?? string.Empty;
+        abonnement.IsActief = request.IsActief;
+    }
+    else
+    {
+        if (string.IsNullOrWhiteSpace(request.Naam))
+            return Results.BadRequest(new { message = "Naam van het abonnement ontbreekt." });
+
+        var cleanedName = request.Naam.Trim();
+
+        abonnement = await db.Abonnements.FirstOrDefaultAsync(a => a.NaamAbonnement == cleanedName);
+
+        if (abonnement == null)
+        {
+            abonnement = new Abonnement
+            {
+                NaamAbonnement = cleanedName,
+                OmschrijvingAbonnement = request.Omschrijving ?? string.Empty,
+                BedragAbonnement = request.Prijs,
+                IsActief = request.IsActief
+            };
+
+            db.Abonnements.Add(abonnement);
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            abonnement.BedragAbonnement = request.Prijs;
+            abonnement.OmschrijvingAbonnement = request.Omschrijving ?? string.Empty;
+            abonnement.IsActief = request.IsActief;
+        }
+    }
+
+    Gebruikerabonnement? userSubscription;
+
+    if (request.IsEditMode)
+    {
+        if (request.OriginalAbonnementId <= 0 || string.IsNullOrWhiteSpace(request.OriginalPeriodeStart))
+            return Results.BadRequest(new { message = "Originele abonnementsleutel ontbreekt." });
+
+        userSubscription = await db.Gebruikerabonnements.FirstOrDefaultAsync(ga =>
+            ga.FkGebruiker == request.UserId &&
+            ga.FkAbonnement == request.OriginalAbonnementId &&
+            ga.PeriodeStart == originalPeriodeStart!.Value);
+
+        if (userSubscription == null)
+            return Results.NotFound(new { message = "Gebruikersabonnement niet gevonden." });
+
+        var duplicate = await db.Gebruikerabonnements.AnyAsync(ga =>
+            ga.FkGebruiker == request.UserId &&
+            ga.FkAbonnement == abonnement.IdAbonnement &&
+            ga.PeriodeStart == periodeStart &&
+            !(ga.FkAbonnement == request.OriginalAbonnementId && ga.PeriodeStart == originalPeriodeStart.Value));
+
+        if (duplicate)
+            return Results.Conflict(new { message = "Er bestaat al een abonnement met dezelfde startdatum." });
+
+        userSubscription.FkAbonnement = abonnement.IdAbonnement;
+        userSubscription.PeriodeStart = periodeStart;
+        userSubscription.PeriodeEinde = periodeEinde;
+        userSubscription.Betaald = request.Betaald;
+    }
+    else
+    {
+        var duplicate = await db.Gebruikerabonnements.AnyAsync(ga =>
+            ga.FkGebruiker == request.UserId &&
+            ga.FkAbonnement == abonnement.IdAbonnement &&
+            ga.PeriodeStart == periodeStart);
+
+        if (duplicate)
+            return Results.Conflict(new { message = "Dit abonnement bestaat al met deze startdatum." });
+
+        userSubscription = new Gebruikerabonnement
+        {
+            FkGebruiker = request.UserId,
+            FkAbonnement = abonnement.IdAbonnement,
+            Betaald = request.Betaald,
+            PeriodeStart = periodeStart,
+            PeriodeEinde = periodeEinde
+        };
+
+        db.Gebruikerabonnements.Add(userSubscription);
+    }
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        AbonnementId = abonnement.IdAbonnement,
+        Naam = abonnement.NaamAbonnement,
+        Beschrijving = abonnement.OmschrijvingAbonnement,
+        Prijs = abonnement.BedragAbonnement,
+        PeriodeStart = userSubscription.PeriodeStart,
+        PeriodeEinde = userSubscription.PeriodeEinde,
+        Betaald = userSubscription.Betaald,
+        IsActief = abonnement.IsActief
+    });
+}).WithTags("Subscriptions");
+
+app.MapDelete("/DeleteUserSubscription", async (int userId, int abonnementId, DateOnly periodeStart, ShiftlyDbContext db) =>
+{
+    var item = await db.Gebruikerabonnements.FirstOrDefaultAsync(ga =>
+        ga.FkGebruiker == userId &&
+        ga.FkAbonnement == abonnementId &&
+        ga.PeriodeStart == periodeStart);
+
+    if (item == null)
+        return Results.NotFound();
+
+    db.Gebruikerabonnements.Remove(item);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+}).WithTags("Subscriptions");
+
+app.MapPut("/SetUserSubscriptionPaidStatus", async (int userId, int abonnementId, DateOnly periodeStart, bool betaald, ShiftlyDbContext db) =>
+{
+    var item = await db.Gebruikerabonnements.FirstOrDefaultAsync(ga =>
+        ga.FkGebruiker == userId &&
+        ga.FkAbonnement == abonnementId &&
+        ga.PeriodeStart == periodeStart);
+
+    if (item == null)
+        return Results.NotFound();
+
+    item.Betaald = betaald;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        item.FkAbonnement,
+        item.PeriodeStart,
+        item.Betaald
+    });
+}).WithTags("Subscriptions");
 #endregion
 
 #region Wishlist Items
-// GET: All Wishlist Items
 app.MapGet("/GetAllWishListItems", async (ShiftlyDbContext db) =>
 {
     var wishlistitem = await db.Wishlistitems.Select(pbl => new
@@ -310,54 +502,45 @@ app.MapGet("/GetAllWishListItems", async (ShiftlyDbContext db) =>
     return Results.Ok(wishlistitem);
 }).WithTags("WishList Items");
 
-// PUT: Edit WishList Item
 app.MapPut("/UpdateWishListItem", async (int id, JsonElement updates, ShiftlyDbContext db) =>
 {
     var item = await db.Wishlistitems.FindAsync(id);
 
-    if (item is null)
+    if (item == null)
         return Results.NotFound();
 
-    item.ItemNaam = updates.GetProperty("itemName").GetString();
-    item.ItemPrijs = updates.GetProperty("itemPrice").GetDecimal();
-    item.ItemOmschrijving = updates.GetProperty("itemDescription").GetString();
-    item.ItemLink = updates.GetProperty("itemLink").GetString();
-    item.Prioriteit = updates.GetProperty("itemPriority").GetInt32();
-    item.Gehaald = updates.GetProperty("itemBought").GetBoolean();
+    if (updates.TryGetProperty("name", out var name))
+        item.ItemNaam = name.GetString() ?? string.Empty;
+
+    if (updates.TryGetProperty("description", out var description))
+        item.ItemOmschrijving = description.GetString();
+
+    if (updates.TryGetProperty("price", out var price))
+        item.ItemPrijs = price.GetDecimal();
+
+    if (updates.TryGetProperty("link", out var link))
+        item.ItemLink = link.GetString();
+
+    if (updates.TryGetProperty("priority", out var priority))
+        item.Prioriteit = priority.ValueKind == JsonValueKind.Number ? priority.GetInt32() : int.TryParse(priority.GetString(), out var parsedPriority) ? parsedPriority : null;
+
+    if (updates.TryGetProperty("bought", out var bought))
+        item.Gehaald = bought.GetBoolean();
 
     await db.SaveChangesAsync();
     return Results.Ok(item);
 }).WithTags("WishList Items");
 
-// PUT: Change Priority
-app.MapPut("/ChangePriority", async (int itemId, int prio, ShiftlyDbContext db) =>
+app.MapPost("/AddWishListItem", async (int userId, string name, string description, decimal price, string link, string prio, bool made, ShiftlyDbContext db) =>
 {
-    var item = await db.Wishlistitems.FirstOrDefaultAsync(pbl => pbl.IdWishListItem == itemId);
-    if (item == null)
-        return Results.NotFound();
-
-    item.Prioriteit = prio;
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = item.Prioriteit });
-}).WithTags("WishList Items");
-
-// POST: Add Wishlist Item
-app.MapPost("/AddWishlistItem", async (int fk, string name, decimal price, string descrpition, string link, int prio, bool made, ShiftlyDbContext db) =>
-{
-    var exists = await db.Wishlistitems.AnyAsync(pbl => pbl.ItemLink == link);
-
-    if (exists)
-        return Results.Conflict("item already in Database");
-
     var item = new Wishlistitem
     {
-        FkGebruiker = fk,
+        FkGebruiker = userId,
         ItemNaam = name,
+        ItemOmschrijving = description,
         ItemPrijs = price,
-        ItemOmschrijving = descrpition,
         ItemLink = link,
-        Prioriteit = prio,
+        Prioriteit = int.TryParse(prio, out var parsedPriority) ? parsedPriority : null,
         Gehaald = made
     };
 
@@ -367,7 +550,6 @@ app.MapPost("/AddWishlistItem", async (int fk, string name, decimal price, strin
     return Results.Created($"wishlistitem", item);
 }).WithTags("WishList Items");
 
-// DELETE: Wishlist Item
 app.MapDelete("/DeleteWishListItem", async (int itemId, ShiftlyDbContext db) =>
 {
     var item = await db.Wishlistitems.FirstOrDefaultAsync(pbl => pbl.IdWishListItem == itemId);
@@ -383,11 +565,11 @@ app.MapDelete("/DeleteWishListItem", async (int itemId, ShiftlyDbContext db) =>
 #endregion
 
 #region Other
-// GET: All Shifts From User
 app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
 {
     var shifts = await db.Shifts
         .Include(pbl => pbl.FkGebruikerAbbonomentNavigation)
+            .ThenInclude(ga => ga.FkAfdelingNavigation)
         .Where(pbl => pbl.FkGebruikerAbbonomentNavigation.FkGebruiker == userId)
         .Select(pbl => new
         {
@@ -398,34 +580,365 @@ app.MapGet("/GetAllShiftsFromUser", async (int userId, ShiftlyDbContext db) =>
             Functie = pbl.Functie,
             Opmerking = pbl.Opmerking,
             Uurloon = pbl.FkGebruikerAbbonomentNavigation.Uurloon,
-            AfdelingId = pbl.FkGebruikerAbbonomentNavigation.FkAfdeling
+            Betaaldag = pbl.FkGebruikerAbbonomentNavigation.Betaaldag,
+            GebruikerAfdelingId = pbl.FkGebruikerAfdeling,
+            AfdelingId = pbl.FkGebruikerAbbonomentNavigation.FkAfdeling,
+            AfdelingNaam = pbl.FkGebruikerAbbonomentNavigation.FkAfdelingNavigation.AfdelingNaam,
+            WerkplekId = pbl.FkGebruikerAbbonomentNavigation.FkAfdelingNavigation.FkWerkplek,
+            WerkplekNaam = pbl.FkGebruikerAbbonomentNavigation.FkAfdelingNavigation.FkWerkplekNavigation.Naam
         })
         .ToListAsync();
 
     return Results.Ok(shifts);
 }).WithTags("Other");
 
-// GET: All Subscriptions From User
-app.MapGet("/GetAllSubscriptionsFromUser", async (int userId, ShiftlyDbContext db) =>
+app.MapGet("/GetDepartmentsForUser", async (int userId, ShiftlyDbContext db) =>
 {
-    var subscriptions = await db.Gebruikerabonnements
+    var departments = await db.Gebruikerafdelings
         .Where(ga => ga.FkGebruiker == userId)
-        .Include(ga => ga.FkAbonnementNavigation)
+        .Include(ga => ga.FkAfdelingNavigation)
+            .ThenInclude(a => a.FkWerkplekNavigation)
+        .OrderBy(ga => ga.FkAfdelingNavigation.FkWerkplekNavigation.Naam)
+        .ThenBy(ga => ga.FkAfdelingNavigation.AfdelingNaam)
         .Select(ga => new
         {
-            AbonnementId = ga.FkAbonnement,
-            Naam = ga.FkAbonnementNavigation.NaamAbonnement,
-            Prijs = ga.FkAbonnementNavigation.BedragAbonnement,
-            PeriodeStart = ga.PeriodeStart,
-            PeriodeEinde = ga.PeriodeEinde,
-            Betaald = ga.Betaald
+            GebruikerAfdelingId = ga.IdGebruikerAfdeling,
+            AfdelingId = ga.FkAfdeling,
+            AfdelingNaam = ga.FkAfdelingNavigation.AfdelingNaam,
+            Uurloon = ga.Uurloon,
+            Betaaldag = ga.Betaaldag,
+            WerkplekId = ga.FkAfdelingNavigation.FkWerkplek,
+            WerkplekNaam = ga.FkAfdelingNavigation.FkWerkplekNavigation.Naam
         })
         .ToListAsync();
 
-    return Results.Ok(subscriptions);
+    return Results.Ok(departments);
 }).WithTags("Other");
 
-// GET: All Wishlist Items From User
+app.MapGet("/GetAllWorkplaces", async (ShiftlyDbContext db) =>
+{
+    var workplaces = await db.Werkpleks
+        .OrderBy(w => w.Naam)
+        .Select(w => new
+        {
+            WerkplekId = w.IdWerkplek,
+            WerkplekNaam = w.Naam,
+            Gemeente = w.Gemeente,
+            Postcode = w.Postcode,
+            StraatNr = w.StraatNr
+        })
+        .ToListAsync();
+
+    return Results.Ok(workplaces);
+}).WithTags("Other");
+
+
+app.MapPost("/CreateWorkplace", async (CreateWorkplaceRequest request, ShiftlyDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Naam) ||
+        string.IsNullOrWhiteSpace(request.Postcode) ||
+        string.IsNullOrWhiteSpace(request.Gemeente) ||
+        string.IsNullOrWhiteSpace(request.StraatNr))
+    {
+        return Results.BadRequest(new { message = "Vul alle werkplekvelden in." });
+    }
+
+    var naam = request.Naam.Trim();
+    var postcode = request.Postcode.Trim();
+    var gemeente = request.Gemeente.Trim();
+    var straatNr = request.StraatNr.Trim();
+
+    var existing = await db.Werkpleks.FirstOrDefaultAsync(w =>
+        w.Naam == naam &&
+        w.Postcode == postcode &&
+        w.Gemeente == gemeente &&
+        w.StraatNr == straatNr);
+
+    if (existing != null)
+    {
+        return Results.Ok(new
+        {
+            WerkplekId = existing.IdWerkplek,
+            WerkplekNaam = existing.Naam,
+            Postcode = existing.Postcode,
+            Gemeente = existing.Gemeente,
+            StraatNr = existing.StraatNr
+        });
+    }
+
+    var workplace = new Werkplek
+    {
+        Naam = naam,
+        Postcode = postcode,
+        Gemeente = gemeente,
+        StraatNr = straatNr
+    };
+
+    db.Werkpleks.Add(workplace);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        WerkplekId = workplace.IdWerkplek,
+        WerkplekNaam = workplace.Naam,
+        Postcode = workplace.Postcode,
+        Gemeente = workplace.Gemeente,
+        StraatNr = workplace.StraatNr
+    });
+}).WithTags("Other");
+app.MapPost("/CreateDepartmentForUser", async (CreateDepartmentForUserRequest request, ShiftlyDbContext db) =>
+{
+    if (request.UserId <= 0)
+        return Results.BadRequest(new { message = "Ongeldige gebruiker." });
+
+    if (string.IsNullOrWhiteSpace(request.AfdelingNaam))
+        return Results.BadRequest(new { message = "Afdelingsnaam mag niet leeg zijn." });
+
+    var trimmedName = request.AfdelingNaam.Trim();
+
+    if (request.WerkplekId <= 0)
+        return Results.BadRequest(new { message = "Kies eerst een werkplek." });
+
+    var existingUserDepartment = await db.Gebruikerafdelings
+        .Include(ga => ga.FkAfdelingNavigation)
+        .FirstOrDefaultAsync(ga => ga.FkGebruiker == request.UserId
+            && ga.FkAfdelingNavigation.FkWerkplek == request.WerkplekId
+            && ga.FkAfdelingNavigation.AfdelingNaam == trimmedName);
+
+    if (existingUserDepartment != null)
+    {
+        return Results.Ok(new
+        {
+            GebruikerAfdelingId = existingUserDepartment.IdGebruikerAfdeling,
+            AfdelingId = existingUserDepartment.FkAfdeling,
+            AfdelingNaam = existingUserDepartment.FkAfdelingNavigation.AfdelingNaam,
+            Uurloon = existingUserDepartment.Uurloon
+        });
+    }
+
+    var fallbackUserDepartment = await db.Gebruikerafdelings
+        .Include(ga => ga.FkAfdelingNavigation)
+        .Where(ga => ga.FkGebruiker == request.UserId)
+        .OrderByDescending(ga => ga.IdGebruikerAfdeling)
+        .FirstOrDefaultAsync();
+
+    var workplaceExists = await db.Werkpleks.AnyAsync(w => w.IdWerkplek == request.WerkplekId);
+    if (!workplaceExists)
+        return Results.BadRequest(new { message = "De gekozen werkplek bestaat niet." });
+
+    var afdeling = await db.Afdelings
+        .FirstOrDefaultAsync(a => a.FkWerkplek == request.WerkplekId && a.AfdelingNaam == trimmedName);
+
+    if (afdeling == null)
+    {
+        afdeling = new Afdeling
+        {
+            AfdelingNaam = trimmedName,
+            FkWerkplek = request.WerkplekId
+        };
+
+        db.Afdelings.Add(afdeling);
+        await db.SaveChangesAsync();
+    }
+
+    var gebruikerAfdeling = await db.Gebruikerafdelings
+        .FirstOrDefaultAsync(ga => ga.FkGebruiker == request.UserId && ga.FkAfdeling == afdeling.IdAfdeling);
+
+    if (gebruikerAfdeling == null)
+    {
+        gebruikerAfdeling = new Gebruikerafdeling
+        {
+            FkGebruiker = request.UserId,
+            FkAfdeling = afdeling.IdAfdeling,
+            Uurloon = request.Uurloon ?? fallbackUserDepartment?.Uurloon ?? 0,
+            Betaaldag = request.Betaaldag ?? fallbackUserDepartment?.Betaaldag
+        };
+
+        db.Gebruikerafdelings.Add(gebruikerAfdeling);
+        await db.SaveChangesAsync();
+    }
+
+    return Results.Ok(new
+    {
+        GebruikerAfdelingId = gebruikerAfdeling.IdGebruikerAfdeling,
+        AfdelingId = afdeling.IdAfdeling,
+        AfdelingNaam = afdeling.AfdelingNaam,
+        Uurloon = gebruikerAfdeling.Uurloon,
+        WerkplekId = afdeling.FkWerkplek
+    });
+}).WithTags("Other");
+
+app.MapPost("/ResolveDepartmentForShift", async (ResolveDepartmentForShiftRequest request, ShiftlyDbContext db) =>
+{
+    if (request.UserId <= 0)
+        return Results.BadRequest(new { message = "Ongeldige gebruiker." });
+
+    if (request.Uurloon < 0)
+        return Results.BadRequest(new { message = "Uurloon mag niet negatief zijn." });
+
+    if (request.ExistingGebruikerAfdelingId > 0)
+    {
+        var current = await db.Gebruikerafdelings
+            .Include(ga => ga.FkAfdelingNavigation)
+            .FirstOrDefaultAsync(ga => ga.IdGebruikerAfdeling == request.ExistingGebruikerAfdelingId && ga.FkGebruiker == request.UserId);
+
+        if (current == null)
+            return Results.BadRequest(new { message = "De gekozen afdeling bestaat niet voor deze gebruiker." });
+
+        var betaaldag = request.Betaaldag ?? current.Betaaldag;
+
+        if (request.MakeDefaultUurloon)
+        {
+            current.Uurloon = request.Uurloon;
+            current.Betaaldag = betaaldag;
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new
+            {
+                GebruikerAfdelingId = current.IdGebruikerAfdeling,
+                AfdelingId = current.FkAfdeling,
+                AfdelingNaam = current.FkAfdelingNavigation.AfdelingNaam,
+                WerkplekId = current.FkAfdelingNavigation.FkWerkplek,
+                Uurloon = current.Uurloon,
+                Betaaldag = current.Betaaldag
+            });
+        }
+
+        if (current.Uurloon == request.Uurloon && current.Betaaldag == betaaldag)
+        {
+            return Results.Ok(new
+            {
+                GebruikerAfdelingId = current.IdGebruikerAfdeling,
+                AfdelingId = current.FkAfdeling,
+                AfdelingNaam = current.FkAfdelingNavigation.AfdelingNaam,
+                WerkplekId = current.FkAfdelingNavigation.FkWerkplek,
+                Uurloon = current.Uurloon,
+                Betaaldag = current.Betaaldag
+            });
+        }
+
+        var existingVariant = await db.Gebruikerafdelings
+            .Include(ga => ga.FkAfdelingNavigation)
+            .FirstOrDefaultAsync(ga => ga.FkGebruiker == request.UserId
+                && ga.FkAfdeling == current.FkAfdeling
+                && ga.Uurloon == request.Uurloon
+                && ga.Betaaldag == betaaldag);
+
+        if (existingVariant == null)
+        {
+            existingVariant = new Gebruikerafdeling
+            {
+                FkGebruiker = request.UserId,
+                FkAfdeling = current.FkAfdeling,
+                Uurloon = request.Uurloon,
+                Betaaldag = betaaldag
+            };
+
+            db.Gebruikerafdelings.Add(existingVariant);
+            await db.SaveChangesAsync();
+            await db.Entry(existingVariant).Reference(x => x.FkAfdelingNavigation).LoadAsync();
+        }
+
+        return Results.Ok(new
+        {
+            GebruikerAfdelingId = existingVariant.IdGebruikerAfdeling,
+            AfdelingId = existingVariant.FkAfdeling,
+            AfdelingNaam = existingVariant.FkAfdelingNavigation.AfdelingNaam,
+            WerkplekId = existingVariant.FkAfdelingNavigation.FkWerkplek,
+            Uurloon = existingVariant.Uurloon,
+            Betaaldag = existingVariant.Betaaldag
+        });
+    }
+
+    if (request.WerkplekId <= 0)
+        return Results.BadRequest(new { message = "Kies eerst een werkplek." });
+
+    if (string.IsNullOrWhiteSpace(request.AfdelingNaam))
+        return Results.BadRequest(new { message = "Afdelingsnaam mag niet leeg zijn." });
+
+    var afdelingNaam = request.AfdelingNaam.Trim();
+    var betaaldagNieuw = request.Betaaldag;
+
+    var workplaceExists = await db.Werkpleks.AnyAsync(w => w.IdWerkplek == request.WerkplekId);
+    if (!workplaceExists)
+        return Results.BadRequest(new { message = "De gekozen werkplek bestaat niet." });
+
+    var afdeling = await db.Afdelings
+        .FirstOrDefaultAsync(a => a.FkWerkplek == request.WerkplekId && a.AfdelingNaam == afdelingNaam);
+
+    if (afdeling == null)
+    {
+        afdeling = new Afdeling
+        {
+            AfdelingNaam = afdelingNaam,
+            FkWerkplek = request.WerkplekId
+        };
+
+        db.Afdelings.Add(afdeling);
+        await db.SaveChangesAsync();
+    }
+
+    var sameVariant = await db.Gebruikerafdelings
+        .FirstOrDefaultAsync(ga => ga.FkGebruiker == request.UserId
+            && ga.FkAfdeling == afdeling.IdAfdeling
+            && ga.Uurloon == request.Uurloon
+            && ga.Betaaldag == betaaldagNieuw);
+
+    if (sameVariant != null)
+    {
+        return Results.Ok(new
+        {
+            GebruikerAfdelingId = sameVariant.IdGebruikerAfdeling,
+            AfdelingId = sameVariant.FkAfdeling,
+            AfdelingNaam = afdeling.AfdelingNaam,
+            WerkplekId = afdeling.FkWerkplek,
+            Uurloon = sameVariant.Uurloon,
+            Betaaldag = sameVariant.Betaaldag
+        });
+    }
+
+    var firstForDepartment = await db.Gebruikerafdelings
+        .FirstOrDefaultAsync(ga => ga.FkGebruiker == request.UserId && ga.FkAfdeling == afdeling.IdAfdeling);
+
+    if (firstForDepartment != null && request.MakeDefaultUurloon)
+    {
+        firstForDepartment.Uurloon = request.Uurloon;
+        firstForDepartment.Betaaldag = betaaldagNieuw;
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new
+        {
+            GebruikerAfdelingId = firstForDepartment.IdGebruikerAfdeling,
+            AfdelingId = firstForDepartment.FkAfdeling,
+            AfdelingNaam = afdeling.AfdelingNaam,
+            WerkplekId = afdeling.FkWerkplek,
+            Uurloon = firstForDepartment.Uurloon,
+            Betaaldag = firstForDepartment.Betaaldag
+        });
+    }
+
+    var gebruikerAfdeling = new Gebruikerafdeling
+    {
+        FkGebruiker = request.UserId,
+        FkAfdeling = afdeling.IdAfdeling,
+        Uurloon = request.Uurloon,
+        Betaaldag = betaaldagNieuw
+    };
+
+    db.Gebruikerafdelings.Add(gebruikerAfdeling);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        GebruikerAfdelingId = gebruikerAfdeling.IdGebruikerAfdeling,
+        AfdelingId = gebruikerAfdeling.FkAfdeling,
+        AfdelingNaam = afdeling.AfdelingNaam,
+        WerkplekId = afdeling.FkWerkplek,
+        Uurloon = gebruikerAfdeling.Uurloon,
+        Betaaldag = gebruikerAfdeling.Betaaldag
+    });
+}).WithTags("Other");
+
 app.MapGet("/GetAllWishListItemsFromUser", async (int userId, ShiftlyDbContext db) =>
 {
     var wishlistitems = await db.Wishlistitems
@@ -445,7 +958,6 @@ app.MapGet("/GetAllWishListItemsFromUser", async (int userId, ShiftlyDbContext d
     return Results.Ok(wishlistitems);
 }).WithTags("Other");
 
-// GET: User Using Password And Email 
 app.MapGet("/login", async (string email, string password, ShiftlyDbContext db) =>
 {
     var user = await db.Gebruikers
@@ -458,7 +970,51 @@ app.MapGet("/login", async (string email, string password, ShiftlyDbContext db) 
 
     return Results.Ok(user);
 }).WithTags("Other");
-
 #endregion
 
 app.Run();
+
+public sealed class SaveUserSubscriptionRequest
+{
+    public int UserId { get; set; }
+    public bool IsEditMode { get; set; }
+    public int? OriginalAbonnementId { get; set; }
+    public string? OriginalPeriodeStart { get; set; }
+    public int ExistingAbonnementId { get; set; }
+    public string? Naam { get; set; }
+    public string? Omschrijving { get; set; }
+    public decimal Prijs { get; set; }
+    public bool IsActief { get; set; } = true;
+    public bool Betaald { get; set; }
+    public string PeriodeStart { get; set; } = string.Empty;
+    public string PeriodeEinde { get; set; } = string.Empty;
+}
+
+public sealed class CreateDepartmentForUserRequest
+{
+    public int UserId { get; set; }
+    public int WerkplekId { get; set; }
+    public string AfdelingNaam { get; set; } = string.Empty;
+    public decimal? Uurloon { get; set; }
+    public sbyte? Betaaldag { get; set; }
+}
+
+
+public sealed class ResolveDepartmentForShiftRequest
+{
+    public int UserId { get; set; }
+    public int ExistingGebruikerAfdelingId { get; set; }
+    public int WerkplekId { get; set; }
+    public string? AfdelingNaam { get; set; }
+    public decimal Uurloon { get; set; }
+    public bool MakeDefaultUurloon { get; set; }
+    public sbyte? Betaaldag { get; set; }
+}
+
+public class CreateWorkplaceRequest
+{
+    public string Naam { get; set; } = string.Empty;
+    public string Postcode { get; set; } = string.Empty;
+    public string Gemeente { get; set; } = string.Empty;
+    public string StraatNr { get; set; } = string.Empty;
+}
